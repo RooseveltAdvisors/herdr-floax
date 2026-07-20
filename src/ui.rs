@@ -15,7 +15,12 @@ pub fn box_rect(area: Rect, cfg: &Config) -> Rect {
     let h = ((u32::from(area.height) * u32::from(cfg.height_pct)) / 100) as u16;
     let w = w.clamp(20.min(area.width), area.width);
     let h = h.clamp(5.min(area.height), area.height);
-    Rect::new(area.x + (area.width - w) / 2, area.y + (area.height - h) / 2, w, h)
+    Rect::new(
+        area.x + (area.width - w) / 2,
+        area.y + (area.height - h) / 2,
+        w,
+        h,
+    )
 }
 
 /// The PTY-facing interior of the floating box (inside the 1-cell border).
@@ -34,12 +39,15 @@ pub fn box_inner(area: Rect, cfg: &Config) -> Rect {
 pub fn draw(f: &mut Frame, cfg: &Config, screen: &vt100::Screen) {
     let area = f.area();
 
-    // Dimmed backdrop. The app cannot composite live herdr panes behind the box
-    // (herdr owns those PTYs); a quiet dark fill reads as "workspace dimmed".
-    // Color comes from config (`backdrop`, default dark green).
-    let (br, bg, bb) = cfg.backdrop;
+    // Backdrop. The app cannot composite live herdr panes behind the box
+    // (herdr owns those PTYs), so it fills the area with the terminal background.
+    // `Color::Reset` preserves the pane's default background, which herdr keeps
+    // synchronized with the host terminal. Config may explicitly override it.
+    let backdrop = cfg
+        .backdrop
+        .map_or(Color::Reset, |(r, g, b)| Color::Rgb(r, g, b));
     f.render_widget(
-        Block::default().style(Style::default().bg(Color::Rgb(br, bg, bb)).fg(Color::DarkGray)),
+        Block::default().style(Style::default().bg(backdrop).fg(Color::DarkGray)),
         area,
     );
 
@@ -77,14 +85,17 @@ fn render_screen(buf: &mut Buffer, area: Rect, screen: &vt100::Screen) {
                 skip_next = false;
                 continue;
             }
-            let Some(cell) = screen.cell(r, c) else { continue };
+            let Some(cell) = screen.cell(r, c) else {
+                continue;
+            };
             let Some(target) = buf.cell_mut(Position::new(area.x + c, area.y + r)) else {
                 continue;
             };
             let contents = cell.contents();
             target.set_symbol(if contents.is_empty() { " " } else { &contents });
-            let mut style =
-                Style::default().fg(conv_color(cell.fgcolor())).bg(conv_color(cell.bgcolor()));
+            let mut style = Style::default()
+                .fg(conv_color(cell.fgcolor()))
+                .bg(conv_color(cell.bgcolor()));
             if cell.bold() {
                 style = style.add_modifier(Modifier::BOLD);
             }
@@ -116,7 +127,11 @@ mod tests {
     use super::*;
 
     fn cfg(w: u16, h: u16) -> Config {
-        Config { width_pct: w, height_pct: h, ..Config::default() }
+        Config {
+            width_pct: w,
+            height_pct: h,
+            ..Config::default()
+        }
     }
 
     #[test]

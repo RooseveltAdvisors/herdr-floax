@@ -14,21 +14,21 @@ pub struct Config {
     pub height_pct: u16,
     /// The toggle key shown in the bottom-border hint (display only).
     pub key_hint: String,
-    /// Backdrop fill color (RGB), drawn around the floating box.
-    pub backdrop: (u8, u8, u8),
+    /// Optional backdrop fill override. `None` uses the terminal's default
+    /// background color.
+    pub backdrop: Option<(u8, u8, u8)>,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        // Generous defaults: the backdrop is a dead dark fill (see README
+        // Generous defaults: the backdrop is dead space (see README
         // "Limitations" — it can't show the real workspace dimmed), so margin
         // is wasted space. Keep just enough inset to read as a floating box.
-        // Backdrop: a deep green (#0d2b1d).
         Self {
-            width_pct: 94,
-            height_pct: 92,
+            width_pct: 98,
+            height_pct: 96,
             key_hint: "prefix+f".into(),
-            backdrop: (0x0d, 0x2b, 0x1d),
+            backdrop: None,
         }
     }
 }
@@ -94,7 +94,7 @@ impl Config {
             }
             "backdrop" => {
                 if let Some(rgb) = parse_hex_color(val) {
-                    self.backdrop = rgb;
+                    self.backdrop = Some(rgb);
                 }
             }
             _ => {}
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn defaults() {
         let c = Config::default();
-        assert_eq!((c.width_pct, c.height_pct), (94, 92));
+        assert_eq!((c.width_pct, c.height_pct), (98, 96));
     }
 
     #[test]
@@ -161,17 +161,17 @@ mod tests {
     }
 
     #[test]
-    fn backdrop_defaults_to_dark_green() {
-        assert_eq!(Config::default().backdrop, (0x0d, 0x2b, 0x1d));
+    fn backdrop_defaults_to_terminal_background() {
+        assert_eq!(Config::default().backdrop, None);
     }
 
     #[test]
     fn backdrop_parses_hex_with_and_without_hash() {
         let mut c = Config::default();
         c.apply_conf("backdrop = #102030\n");
-        assert_eq!(c.backdrop, (0x10, 0x20, 0x30));
+        assert_eq!(c.backdrop, Some((0x10, 0x20, 0x30)));
         c.apply_conf("backdrop = A1B2C3\n");
-        assert_eq!(c.backdrop, (0xa1, 0xb2, 0xc3));
+        assert_eq!(c.backdrop, Some((0xa1, 0xb2, 0xc3)));
     }
 
     #[test]
@@ -179,7 +179,7 @@ mod tests {
         let mut c = Config::default();
         for bad in ["#12345", "#1234567", "not-a-color", "#zzzzzz", ""] {
             c.apply_conf(&format!("backdrop={bad}\n"));
-            assert_eq!(c.backdrop, Config::default().backdrop, "should ignore {bad:?}");
+            assert_eq!(c.backdrop, None, "should ignore {bad:?}");
         }
     }
 
@@ -187,6 +187,6 @@ mod tests {
     fn backdrop_env_override() {
         let mut c = Config::default();
         c.apply_env(|k| (k == "HERDR_FLOAX_BACKDROP").then(|| "#334455".to_string()));
-        assert_eq!(c.backdrop, (0x33, 0x44, 0x55));
+        assert_eq!(c.backdrop, Some((0x33, 0x44, 0x55)));
     }
 }

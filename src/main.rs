@@ -8,7 +8,7 @@
 //! the same way herdr-file-viewer draws its help overlay. The box hosts a live
 //! PTY rather than static text, which is what makes it a shell and not a modal.
 //!
-//! KNOWN LIMITATION: the backdrop around the box is a dark fill this app
+//! KNOWN LIMITATION: the backdrop around the box is a solid fill this app
 //! paints, NOT the user's live panes dimmed behind it (tmux-floax shows the
 //! real session through its popup). A plugin only controls its own pane's
 //! canvas — herdr owns the other panes' PTYs and has no primitive for
@@ -59,7 +59,12 @@ fn restore_terminal() {
 }
 
 fn pty_size(inner: Rect) -> PtySize {
-    PtySize { rows: inner.height, cols: inner.width, pixel_width: 0, pixel_height: 0 }
+    PtySize {
+        rows: inner.height,
+        cols: inner.width,
+        pixel_width: 0,
+        pixel_height: 0,
+    }
 }
 
 fn main() -> std::io::Result<()> {

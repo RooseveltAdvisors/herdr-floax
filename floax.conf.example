@@ -7,14 +7,15 @@
 # HERDR_FLOAX_HEIGHT_PCT / HERDR_FLOAX_KEY_HINT override these per-invocation.
 
 # Floating box size as a percentage of the pane (clamped 20..100). Defaults are
-# generous because the backdrop is a dead dark fill (see README "Limitations"),
+# generous because the backdrop is dead space (see README "Limitations"),
 # so extra margin is wasted space.
-width_pct = 94
-height_pct = 92
+width_pct = 98
+height_pct = 96
 
 # The toggle key shown in the bottom-border hint (display only — the actual
 # keybinding lives in ~/.config/herdr/config.toml).
 key_hint = prefix+f
 
-# Backdrop fill color around the box, as #rrggbb (default: dark green).
-backdrop = #0d2b1d
+# Optional backdrop fill color around the box, as #rrggbb. By default the
+# current terminal background is used.
+# backdrop = #102030

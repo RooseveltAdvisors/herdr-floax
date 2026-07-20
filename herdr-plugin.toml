@@ -9,7 +9,7 @@
 # open -> reveal -> dismiss, one instance per workspace. The shell session
 # persists across toggles via a per-workspace detach session.
 #
-# KNOWN LIMITATION: the backdrop around the floating box is a dark fill drawn
+# KNOWN LIMITATION: the backdrop around the floating box is a solid fill drawn
 # by the app, NOT the user's live panes dimmed behind it (as tmux-floax shows).
 # A plugin only controls its own pane's canvas; herdr owns the other panes'
 # PTYs and has no primitive for compositing a persistent popup over them. See

@@ -12,7 +12,7 @@ pane. Its session persists across toggles.
 
 Pressing the key toggles one floating pane per workspace:
 
-- **no floating pane yet** → opens a centered, sized popup (default 94%×92% —
+- **no floating pane yet** → opens a centered, sized popup (default 98%×96% —
   generous, since the backdrop is dead space; see
   [Limitations](#limitations)) hosting your login shell, over a dimmed backdrop
 - **focused on it** → dismisses it (closes the pane; the shell session survives)
@@ -38,8 +38,8 @@ constraint.
   per-workspace detached session when a multiplexer (`dtach`, `abduco`, or
   `tmux`) is on your `PATH` — anything running in it survives dismiss/reopen.
   Without one, it degrades to a plain login shell (fresh each reopen).
-- **Backdrop:** see [Limitations](#limitations) — the area around the box is a
-  dark fill, not your live panes dimmed behind it.
+- **Backdrop:** see [Limitations](#limitations) — the area around the box uses
+  your terminal background, not your live panes dimmed behind it.
 
 ## Limitations
 
@@ -49,8 +49,8 @@ herdr-floax cannot replicate that: the plugin only controls its own pane's
 canvas. herdr owns the other panes' PTYs and provides no primitive for a plugin
 to composite a persistent popup over them (its only true-overlay placement is
 transient — it is torn down the moment the invoking keybinding action
-completes). So the area around the floating box is a quiet dark fill drawn by
-the app, not your dimmed workspace showing through.
+completes). So the area around the floating box is a solid fill matching your
+terminal's background, not your dimmed workspace showing through.
 
 Related version-specific quirks this plugin works around (herdr 0.7.1):
 
@@ -70,10 +70,10 @@ Copy `floax.conf.example` to the plugin config dir
 `~/.config/herdr/plugins/config/herdr-floax/floax.conf`):
 
 ```conf
-width_pct = 94    # box width, % of the pane (20..100)
-height_pct = 92   # box height, % of the pane (20..100)
+width_pct = 98    # box width, % of the pane (20..100)
+height_pct = 96   # box height, % of the pane (20..100)
 key_hint = prefix+f   # shown in the bottom border (display only)
-backdrop = #0d2b1d    # backdrop fill color, #rrggbb (default: dark green)
+# backdrop = #102030  # optional override; defaults to the terminal background
 ```
 
 Env overrides per invocation: `HERDR_FLOAX_WIDTH_PCT`, `HERDR_FLOAX_HEIGHT_PCT`,
