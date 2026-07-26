@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -f "$HOME/.cargo/env" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.cargo/env"
+fi
+
+for tool in cargo jq; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Required tool '$tool' is unavailable; rerun .agents/setup." >&2
+    exit 1
+  fi
+done
+
+echo "Orb environment is ready; no services need restarting."

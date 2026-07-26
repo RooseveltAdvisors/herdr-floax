@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+echo "Installing required system packages..."
+missing_packages=()
+command -v curl >/dev/null 2>&1 || missing_packages+=(curl)
+command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
+
+if ((${#missing_packages[@]})); then
+  sudo apt-get update
+  sudo apt-get install -y ca-certificates "${missing_packages[@]}"
+fi
+
+if [[ -f "$HOME/.cargo/env" ]]; then
+  # shellcheck disable=SC1091
+  source "$HOME/.cargo/env"
+fi
+
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "Installing the stable Rust toolchain..."
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --profile minimal --default-toolchain stable
+  # shellcheck disable=SC1091
+  source "$HOME/.cargo/env"
+fi
+
+if [[ -f "$HOME/.cargo/env" ]] && ! grep -Fq '$HOME/.cargo/env' "$HOME/.bash_profile" 2>/dev/null; then
+  printf '\n%s\n' '. "$HOME/.cargo/env"' >> "$HOME/.bash_profile"
+fi
+
+echo "Fetching locked Rust dependencies..."
+cargo fetch --locked
+
+echo "Building herdr-floax..."
+cargo build --locked
+
+echo "Orb setup complete."
