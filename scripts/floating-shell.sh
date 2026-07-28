@@ -24,9 +24,16 @@ if command -v dtach >/dev/null 2>&1; then
 # abduco: -A attach-or-create a session named per workspace.
 elif command -v abduco >/dev/null 2>&1; then
   exec abduco -A "floax-$ws" "$shell" -l
-# tmux: new-session-or-attach to a per-workspace session in its own server.
+# tmux: per-workspace session in its own server. Mouse is enabled so the
+# wheel drives tmux's own copy mode: the floax app forwards SGR mouse events
+# when the embedded app reports mouse (it always runs full-screen, so the
+# app's own scrollback paging can't see its history). The socket name is
+# overridable so tests can avoid touching a real install's server.
 elif command -v tmux >/dev/null 2>&1; then
-  exec tmux -L "herdr-floax" new-session -A -s "$ws" "$shell -l"
+  sock="${HERDR_FLOAX_TMUX_SOCKET:-herdr-floax}"
+  tmux -L "$sock" new-session -d -s "$ws" "$shell -l" 2>/dev/null || true
+  tmux -L "$sock" set-option -g mouse on 2>/dev/null || true
+  exec tmux -L "$sock" attach-session -t "$ws"
 fi
 
 exec "$shell" -l

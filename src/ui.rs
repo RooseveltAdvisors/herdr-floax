@@ -53,21 +53,31 @@ pub fn draw(f: &mut Frame, cfg: &Config, screen: &vt100::Screen) {
 
     let boxr = box_rect(area, cfg);
     f.render_widget(Clear, boxr);
+    // While scrolled back, the view shows vt100 scrollback, not the live
+    // screen; say so in the border instead of the key hint.
+    let scrolled = screen.scrollback();
+    let bottom = if scrolled > 0 {
+        Line::from(format!(" scrolled {scrolled} · type or PgDn to return "))
+            .centered()
+            .style(Style::default().fg(Color::Yellow))
+    } else {
+        Line::from(format!(" {} hides · shell persists ", cfg.key_hint))
+            .centered()
+            .style(Style::default().fg(Color::DarkGray))
+    };
     let chrome = Block::bordered()
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(Color::Magenta))
         .title(Line::from(" ⌂ floax ").centered())
-        .title_bottom(
-            Line::from(format!(" {} hides · shell persists ", cfg.key_hint))
-                .centered()
-                .style(Style::default().fg(Color::DarkGray)),
-        );
+        .title_bottom(bottom);
     let inner = chrome.inner(boxr);
     f.render_widget(chrome, boxr);
 
     render_screen(f.buffer_mut(), inner, screen);
 
-    if !screen.hide_cursor() {
+    // The vt100 cursor position refers to the live screen; while scrolled
+    // back it would land on the wrong row, so hide the cursor then.
+    if scrolled == 0 && !screen.hide_cursor() {
         let (r, c) = screen.cursor_position();
         if r < inner.height && c < inner.width {
             f.set_cursor_position(Position::new(inner.x + c, inner.y + r));

@@ -19,3 +19,8 @@ key_hint = prefix+f
 # Optional backdrop fill color around the box, as #rrggbb. By default the
 # current terminal background is used.
 # backdrop = #102030
+
+# Rows of scrollback the embedded terminal keeps for PgUp/PgDn and wheel
+# scrolling (see README "Scrolling"; herdr's own copy mode cannot see the
+# floax shell's history). Default 10000, capped at 100000.
+# scrollback_lines = 10000
