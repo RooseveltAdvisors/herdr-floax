@@ -143,5 +143,5 @@ Reload herdr config after changing it.
 | `scripts/toggle-floating.sh` | open ↔ reveal ↔ dismiss, per workspace |
 | `scripts/floating-shell.sh` | login shell; dtach/abduco when available |
 | `scripts/install-keybinding.sh` | default keybind installer |
-| `floax.conf.example` | optional notes / legacy keys |
+| `floax.conf.example` | legacy 0.3.x keys, no longer read (points here) |
 | `src/` | legacy 0.3.x nested TUI (not used as the pane command) |

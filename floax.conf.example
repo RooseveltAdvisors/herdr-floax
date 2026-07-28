@@ -1,19 +1,13 @@
-# herdr-floax configuration.
+# herdr-floax configuration — nothing reads this file as of 0.4.0.
 #
-# Copy to the plugin's config dir (herdr plugin config-dir herdr-floax):
-#   ~/.config/herdr/plugins/config/herdr-floax/floax.conf
+# The floating pane is a real zoomed herdr terminal, not an app-drawn box, so
+# the 0.3.x nested-TUI keys (width_pct, height_pct, backdrop, scrollback_lines,
+# key_hint) no longer have any effect. Copying this file to the plugin config
+# dir does nothing.
 #
-# As of 0.4.0 the floating pane is a real zoomed herdr terminal (not an
-# app-drawn box), so width/height/backdrop/scrollback_lines from the nested-TUI
-# era no longer apply. Kept here as documentation for older configs; unknown
-# keys are ignored if nothing reads this file yet.
+# Behaviour is controlled entirely by environment variables — see the
+# "Configuration" section of README.md, which owns that list. The keybind comes
+# from scripts/install-keybinding.sh (its first argument or $HERDR_FLOAX_KEY).
 #
-# Persistence: install `dtach` or `abduco` so dismiss/reopen reattaches the
-# same shell. Without one, each open starts a fresh login shell.
-#
-# Opt-in legacy: HERDR_FLOAX_USE_TMUX=1 wraps the shell in tmux (inner copy
-# mode works; herdr host copy mode will not see history).
-
-# Display-only note of the default keybind. Nothing reads this file in 0.4.0 —
-# install-keybinding.sh takes the key from its first argument or $HERDR_FLOAX_KEY.
-key_hint = prefix+f
+# This file is kept only so 0.3.x configs have somewhere to look; it is a
+# candidate for deletion along with the legacy src/ tree.
