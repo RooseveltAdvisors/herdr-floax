@@ -1,26 +1,13 @@
-# herdr-floax configuration.
+# herdr-floax configuration — nothing reads this file as of 0.4.0.
 #
-# Copy to the plugin's config dir (herdr plugin config-dir herdr-floax):
-#   ~/.config/herdr/plugins/config/herdr-floax/floax.conf
+# The floating pane is a real zoomed herdr terminal, not an app-drawn box, so
+# the 0.3.x nested-TUI keys (width_pct, height_pct, backdrop, scrollback_lines,
+# key_hint) no longer have any effect. Copying this file to the plugin config
+# dir does nothing.
 #
-# Values are read when the floating pane opens. Env vars HERDR_FLOAX_WIDTH_PCT /
-# HERDR_FLOAX_HEIGHT_PCT / HERDR_FLOAX_KEY_HINT override these per-invocation.
-
-# Floating box size as a percentage of the pane (clamped 20..100). Defaults are
-# generous because the backdrop is dead space (see README "Limitations"),
-# so extra margin is wasted space.
-width_pct = 98
-height_pct = 96
-
-# The toggle key shown in the bottom-border hint (display only — the actual
-# keybinding lives in ~/.config/herdr/config.toml).
-key_hint = prefix+f
-
-# Optional backdrop fill color around the box, as #rrggbb. By default the
-# current terminal background is used.
-# backdrop = #102030
-
-# Rows of scrollback the embedded terminal keeps for PgUp/PgDn and wheel
-# scrolling (see README "Scrolling"; herdr's own copy mode cannot see the
-# floax shell's history). Default 10000, capped at 100000.
-# scrollback_lines = 10000
+# Behaviour is controlled entirely by environment variables — see the
+# "Configuration" section of README.md, which owns that list. The keybind comes
+# from scripts/install-keybinding.sh (its first argument or $HERDR_FLOAX_KEY).
+#
+# This file is kept only so 0.3.x configs have somewhere to look; it is a
+# candidate for deletion along with the legacy src/ tree.

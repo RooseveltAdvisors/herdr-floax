@@ -1,5 +1,11 @@
 //! herdr-floax — a floating scratch shell for herdr, à la tmux-floax.
 //!
+//! LEGACY (0.3.x): this nested TUI is **no longer the pane command** and is not
+//! built at plugin install. Since 0.4.0 the pane runs `scripts/floating-shell.sh`
+//! directly so the shell stays on the primary screen and herdr's own copy mode
+//! can scroll it; everything below describes the superseded 0.3.x design and is
+//! kept only until this tree is deleted. See README.md and AGENTS.md.
+//!
 //! Runs as one persistent herdr pane (opened as a zoomed split by the toggle
 //! script) and draws a centered, sized box hosting a real shell PTY. herdr has
 //! no sized floating-pane primitive that survives a keybinding — its

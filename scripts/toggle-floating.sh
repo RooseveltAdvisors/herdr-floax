@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Toggle the floating scratch pane for the CURRENT workspace.
 #
-# "Launch-or-reveal, dismiss on repeat", scoped per workspace (mirrors the
-# bundled herdr-file-viewer's launcher pattern). The floating pane is a split
-# that we zoom (maximize) for the fullscreen floating look, found by its label
-# ("⌂ floax") within this workspace:
+# "Launch-or-reveal, dismiss on repeat", scoped per workspace. The floating
+# pane is a real herdr split running scripts/floating-shell.sh; we zoom it for
+# a full-workspace floating look. Found by its label ("⌂ floax") within this
+# workspace:
 #
 #   - no floating pane in this workspace       -> OPEN a new one, maximized
 #   - a floating pane exists but isn't focused  -> REVEAL it (focus + maximize)
@@ -13,7 +13,7 @@
 # herdr injects $HERDR_WORKSPACE_ID / $HERDR_PANE_ID / $HERDR_BIN_PATH into this
 # action command. Any parse/edge failure degrades to OPEN — never a silent
 # no-op. Persistence across a DISMISS is provided by scripts/floating-shell.sh
-# (a detach session when a multiplexer is installed).
+# (dtach/abduco when installed).
 set -uo pipefail
 
 LABEL="⌂ floax"
@@ -44,15 +44,13 @@ open_pane() {
   fi
   [ -z "$cwd" ] && cwd="$("$herdr" pane current 2>/dev/null | jq -r '.result.pane.cwd // empty')"
 
-  # `split`, then zoom it — NOT `overlay`/`zoomed`. An overlay/zoomed placement
-  # is a transient view herdr tears down the instant the creating keybinding
-  # action completes (the pane flashes then vanishes). A split is a real,
-  # persistent layout pane; `pane zoom --on` then maximizes it for the floating,
-  # fullscreen look. Closing it later restores the original layout.
+  # `split`, then zoom — NOT `overlay`/`zoomed` (transient from keybindings)
+  # and NOT `popup` (session-modal terminal outside the tiled layout: herdr
+  # copy mode targets the focused tiled pane, not the popup, so prefix+j /
+  # C-u/C-d would not scroll floax history).
   #
-  # The starting directory is passed via --env HERDR_FLOAX_CWD, NOT herdr's
-  # --cwd flag: in herdr 0.7.1 `plugin pane open --cwd <path>` makes the pane
-  # exit immediately. floating-shell.sh cd's there instead.
+  # Starting directory via --env HERDR_FLOAX_CWD, not --cwd (herdr 0.7.1
+  # quirk: --cwd could make the pane exit immediately).
   set -- plugin pane open --plugin herdr-floax --entrypoint floating \
       --placement split --direction right --env HERDR_FLOAX=1 --focus
   [ -n "$target" ] && set -- "$@" --target-pane "$target"
@@ -80,11 +78,10 @@ focused="${found%% *}"
 pid="${found#* }"
 
 if [ "$focused" = "true" ]; then
-  # Currently shown (focused + maximized) → dismiss. floating-shell.sh keeps the
-  # session alive (detach multiplexer) so the next open re-attaches.
+  # Currently shown (focused + maximized) → dismiss. floating-shell.sh keeps
+  # the session alive when dtach/abduco is available.
   exec "$herdr" plugin pane close "$pid"
 else
-  # Exists but you focused away (so it un-maximized) → reveal: `pane zoom --on`
-  # both focuses AND re-maximizes it, restoring the floating look in one step.
+  # Exists but you focused away (so it un-maximized) → reveal.
   exec "$herdr" pane zoom "$pid" --on
 fi
