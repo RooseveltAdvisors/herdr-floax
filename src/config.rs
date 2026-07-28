@@ -17,6 +17,10 @@ pub struct Config {
     /// Optional backdrop fill override. `None` uses the terminal's default
     /// background color.
     pub backdrop: Option<(u8, u8, u8)>,
+    /// Rows of scrollback the embedded terminal keeps. herdr captures no
+    /// scrollback for this pane (the app draws on the alternate screen), so
+    /// this buffer is what PgUp/PgDn and wheel scrolling page through.
+    pub scrollback_lines: usize,
 }
 
 impl Default for Config {
@@ -29,6 +33,7 @@ impl Default for Config {
             height_pct: 96,
             key_hint: "prefix+f".into(),
             backdrop: None,
+            scrollback_lines: 10_000,
         }
     }
 }
@@ -73,6 +78,9 @@ impl Config {
         if let Some(v) = get("HERDR_FLOAX_BACKDROP") {
             self.set("backdrop", &v);
         }
+        if let Some(v) = get("HERDR_FLOAX_SCROLLBACK_LINES") {
+            self.set("scrollback_lines", &v);
+        }
     }
 
     fn set(&mut self, key: &str, val: &str) {
@@ -95,6 +103,12 @@ impl Config {
             "backdrop" => {
                 if let Some(rgb) = parse_hex_color(val) {
                     self.backdrop = Some(rgb);
+                }
+            }
+            "scrollback_lines" => {
+                if let Ok(n) = val.parse::<usize>() {
+                    // Cap so a typo can't turn the vt100 grid into a memory hog.
+                    self.scrollback_lines = n.min(100_000);
                 }
             }
             _ => {}
@@ -188,5 +202,17 @@ mod tests {
         let mut c = Config::default();
         c.apply_env(|k| (k == "HERDR_FLOAX_BACKDROP").then(|| "#334455".to_string()));
         assert_eq!(c.backdrop, Some((0x33, 0x44, 0x55)));
+    }
+
+    #[test]
+    fn scrollback_lines_default_conf_env_and_cap() {
+        assert_eq!(Config::default().scrollback_lines, 10_000);
+        let mut c = Config::default();
+        c.apply_conf("scrollback_lines = 5000\n");
+        assert_eq!(c.scrollback_lines, 5000);
+        c.apply_env(|k| (k == "HERDR_FLOAX_SCROLLBACK_LINES").then(|| "2000".to_string()));
+        assert_eq!(c.scrollback_lines, 2000);
+        c.apply_conf("scrollback_lines = 999999999\nscrollback_lines = banana\n");
+        assert_eq!(c.scrollback_lines, 100_000); // capped; junk ignored
     }
 }

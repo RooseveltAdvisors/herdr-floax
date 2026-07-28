@@ -14,25 +14,40 @@
 //! canvas — herdr owns the other panes' PTYs and has no primitive for
 //! compositing a persistent popup over them. See README.md "Limitations".
 //!
-//! Input is raw stdin passthrough: every byte herdr delivers to this pane goes
-//! to the embedded shell verbatim (no lossy key-event translation), so vim,
-//! REPLs, paste, and modifier chords all behave. herdr's prefix key never
-//! reaches us — herdr intercepts it — so the toggle keybinding keeps working
-//! while the shell is focused.
+//! Input is byte-level stdin passthrough with one interception: plain
+//! PgUp/PgDn and SGR wheel events drive the app's own scrollback view (see
+//! SCROLLING below); everything else goes to the embedded shell verbatim (no
+//! lossy key-event translation), so vim, REPLs, paste, and modifier chords
+//! all behave. herdr's prefix key never reaches us — herdr intercepts it — so
+//! the toggle keybinding keeps working while the shell is focused.
 //!
 //! The embedded program is scripts/floating-shell.sh (a login shell wrapped in
 //! a per-workspace dtach/abduco/tmux session when available), so the session
 //! survives the pane being closed on dismiss and re-attaches on reopen.
+//!
+//! SCROLLING: herdr cannot scroll this pane for you. The app draws on the
+//! pane's alternate screen, so herdr captures no scrollback for it (its copy
+//! mode has nothing to page through), and herdr's wheel routing degrades to
+//! "alternate scroll" — turning the wheel into Up/Down arrow keys that land in
+//! the embedded shell as history navigation. The embedded shell's history only
+//! exists inside this process, so scrolling is owned here: the vt100 parser
+//! keeps real scrollback, and the input layer (src/input.rs) intercepts plain
+//! PgUp/PgDn (herdr only steals those for its own scrollback on primary-screen
+//! panes) and SGR wheel events (enabled on the outer pane via ?1000h/?1006h,
+//! which flips herdr's wheel routing from alternate-scroll to delivering mouse
+//! events here).
 
 mod config;
+mod input;
 mod ui;
 
-use std::io::{Read, Write};
+use std::io::Read;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use ratatui::crossterm::execute;
+use ratatui::crossterm::style::Print;
 use ratatui::crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
@@ -54,6 +69,7 @@ fn io_err(e: impl std::fmt::Display) -> std::io::Error {
 }
 
 fn restore_terminal() {
+    let _ = execute!(std::io::stdout(), Print(input::MOUSE_DISABLE));
     let _ = disable_raw_mode();
     let _ = execute!(std::io::stdout(), LeaveAlternateScreen);
 }
@@ -92,7 +108,11 @@ fn main() -> std::io::Result<()> {
     let mut child = pair.slave.spawn_command(cmd).map_err(io_err)?;
     drop(pair.slave);
 
-    let parser = Arc::new(Mutex::new(vt100::Parser::new(inner.height, inner.width, 0)));
+    let parser = Arc::new(Mutex::new(vt100::Parser::new(
+        inner.height,
+        inner.width,
+        cfg.scrollback_lines,
+    )));
     let (tx, rx) = mpsc::channel::<Ev>();
 
     // PTY output → vt100 parser → redraw.
@@ -119,23 +139,35 @@ fn main() -> std::io::Result<()> {
         });
     }
 
-    // stdin → PTY, raw byte passthrough.
+    // stdin → PTY, with scrollback-scroll interception (PgUp/PgDn, wheel).
     {
+        let parser = Arc::clone(&parser);
+        let tx = tx.clone();
         let mut writer = pair.master.take_writer().map_err(io_err)?;
         std::thread::spawn(move || {
-            let mut stdin = std::io::stdin();
-            let mut buf = [0u8; 2048];
-            loop {
-                match stdin.read(&mut buf) {
-                    Ok(0) | Err(_) => break,
-                    Ok(n) => {
-                        if writer.write_all(&buf[..n]).is_err() {
-                            break;
+            // Reader: blocking stdin reads, forwarded as chunks. The
+            // dispatcher holds a trailing partial escape sequence briefly so
+            // a read split mid-sequence can still complete into a recognized
+            // scroll/mouse token.
+            let (chunk_tx, chunk_rx) = mpsc::channel::<Vec<u8>>();
+            std::thread::spawn(move || {
+                let mut stdin = std::io::stdin();
+                let mut buf = [0u8; 2048];
+                loop {
+                    match stdin.read(&mut buf) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => {
+                            if chunk_tx.send(buf[..n].to_vec()).is_err() {
+                                break;
+                            }
                         }
-                        let _ = writer.flush();
                     }
                 }
-            }
+            });
+            let redraw = move || {
+                let _ = tx.send(Ev::Output);
+            };
+            input::dispatch(chunk_rx, &mut writer, &parser, &redraw);
         });
     }
 
@@ -168,7 +200,7 @@ fn main() -> std::io::Result<()> {
         default_hook(info);
     }));
     enable_raw_mode()?;
-    execute!(std::io::stdout(), EnterAlternateScreen)?;
+    execute!(std::io::stdout(), EnterAlternateScreen, Print(input::MOUSE_ENABLE))?;
     let mut terminal = Terminal::new(CrosstermBackend::new(std::io::stdout()))?;
 
     let master = pair.master;
