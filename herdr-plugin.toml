@@ -1,42 +1,37 @@
 # herdr-plugin.toml — manifest for herdr-floax.
 #
 # A floating scratch shell for the current workspace, modeled on tmux-floax
-# (https://github.com/omerxx/tmux-floax). The pane runs a small Rust TUI that
-# draws a centered, sized box over a dimmed backdrop and hosts a real shell PTY
-# inside it — herdr has no sized floating-pane primitive that survives a
-# keybinding, so the floating look is drawn in-pane (the same way
-# herdr-file-viewer draws its help overlay). A single keybinding toggles it:
-# open -> reveal -> dismiss, one instance per workspace. The shell session
-# persists across toggles via a per-workspace detach session.
+# (https://github.com/omerxx/tmux-floax). On herdr 0.7.5 the pane is a real
+# herdr terminal (not a nested alt-screen TUI): the host owns scrollback, so
+# herdr copy mode (prefix+j) and C-u/C-d half-page scroll work on floax history
+# the same way they do on any other pane.
 #
-# KNOWN LIMITATION: the backdrop around the floating box is a solid fill drawn
-# by the app, NOT the user's live panes dimmed behind it (as tmux-floax shows).
-# A plugin only controls its own pane's canvas; herdr owns the other panes'
-# PTYs and has no primitive for compositing a persistent popup over them. See
-# README.md "Limitations".
+# Toggle is open → reveal → dismiss, one instance per workspace. The shell
+# session persists across dismiss when dtach/abduco is available (see
+# scripts/floating-shell.sh). The host pane is a split that the toggle script
+# zooms for a full-workspace floating look. herdr's `overlay`/`zoomed`
+# placements are transient from keybindings; `popup` is sized but is not a
+# tiled pane, so copy mode does not target it — hence split-then-zoom.
 
 id = "herdr-floax"
 name = "herdr-floax"
-version = "0.3.0"
-description = "Toggle a floating scratch shell (sized popup) for the current workspace, à la tmux-floax."
+version = "0.4.0"
+description = "Toggle a floating scratch shell for the current workspace, à la tmux-floax."
 min_herdr_version = "0.7.0"
 platforms = ["linux", "macos"]
 
-# Build the pane binary at install/link time.
-[[build]]
-command = ["cargo", "build", "--release"]
+# No cargo build: the pane runs a shell script. (A previous nested-TUI binary
+# lived under src/; it is no longer the pane command.)
 
-# The floating pane: the floax TUI app hosting the shell PTY. `title` becomes
-# the pane `label`, which toggle-floating.sh uses to find our pane within a
-# workspace. Placement is `split` — the toggle script zooms the pane so the app
-# fills the workspace and the drawn box appears centered over it. (herdr's
-# `overlay`/`zoomed` placements are transient views that are torn down the
-# moment the invoking keybinding action completes, so they can't be used here.)
+# The floating pane: a real login shell (detach-wrapped when possible).
+# `title` becomes the pane `label`, which toggle-floating.sh uses to find our
+# pane within a workspace. Placement default is `split`; the toggle script
+# always opens with split + zoom.
 [[panes]]
 id = "floating"
 title = "⌂ floax"
 placement = "split"
-command = ["./target/release/herdr-floax"]
+command = ["bash", "scripts/floating-shell.sh"]
 
 # The action the keybinding invokes. herdr qualifies this as `herdr-floax.toggle`
 # — that is the id the config.toml `[[keys.command]]` binding references.

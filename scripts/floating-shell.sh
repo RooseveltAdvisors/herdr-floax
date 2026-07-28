@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-# The floating pane's process: a normal interactive login shell.
+# The floating pane's process: a normal interactive login shell on the herdr
+# pane's primary screen.
 #
-# floax's defining behavior is a session that survives toggling. The toggle
-# hides the pane by closing it, so to preserve state across open/close we run
-# the shell inside a per-workspace detached session (dtach/abduco/tmux) and
-# re-attach on every open. No multiplexer installed? Degrade to a plain login
-# shell — still fully usable, just fresh each time it's reopened.
+# Why not a nested TUI / tmux attach by default?
+#   herdr copy mode and host scrollback only see the pane's primary screen.
+#   A nested ratatui box or `tmux attach` switches the pane to the alternate
+#   screen, so prefix+j / C-u / C-d have nothing to scroll. Running the shell
+#   (or a raw PTY multiplexer) directly keeps history in herdr.
 #
-# NOTE: the starting directory arrives via $HERDR_FLOAX_CWD, not herdr's --cwd
-# flag. In herdr 0.7.1, `plugin pane open --cwd <path>` makes the new plugin
-# pane exit immediately (it vanishes), so we set the directory here instead.
+# Persistence across toggle dismiss (which closes the herdr pane):
+#   dtach or abduco reattach the same PTY without using the alternate screen.
+#   plain shell if neither is installed (fresh session each open).
+#
+# Optional legacy path:
+#   HERDR_FLOAX_USE_TMUX=1 falls back to a per-workspace tmux session (alt
+#   screen). That restores tmux-style inner copy mode but breaks herdr host
+#   copy mode / scrollback — only for users who explicitly want it.
+#
+# Starting directory arrives via $HERDR_FLOAX_CWD (not herdr --cwd): in herdr
+# 0.7.1, `plugin pane open --cwd` made the pane exit immediately.
 set -u
 
 shell="${SHELL:-/bin/sh}"
@@ -18,18 +27,19 @@ state_dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
 
 cd "${HERDR_FLOAX_CWD:-$HOME}" 2>/dev/null || cd "$HOME" 2>/dev/null || true
 
-# dtach: attach-or-create (-A); -z disables the suspend key.
+# dtach: attach-or-create (-A); -z disables the suspend key. Raw PTY — primary
+# screen, herdr keeps scrollback.
 if command -v dtach >/dev/null 2>&1; then
   exec dtach -A "$state_dir/floax-$ws.dtach" -z "$shell" -l
+fi
+
 # abduco: -A attach-or-create a session named per workspace.
-elif command -v abduco >/dev/null 2>&1; then
+if command -v abduco >/dev/null 2>&1; then
   exec abduco -A "floax-$ws" "$shell" -l
-# tmux: per-workspace session in its own server. Mouse is enabled so the
-# wheel drives tmux's own copy mode: the floax app forwards SGR mouse events
-# when the embedded app reports mouse (it always runs full-screen, so the
-# app's own scrollback paging can't see its history). The socket name is
-# overridable so tests can avoid touching a real install's server.
-elif command -v tmux >/dev/null 2>&1; then
+fi
+
+# Opt-in tmux path (alternate screen — herdr copy mode will not see history).
+if [ "${HERDR_FLOAX_USE_TMUX:-}" = "1" ] && command -v tmux >/dev/null 2>&1; then
   sock="${HERDR_FLOAX_TMUX_SOCKET:-herdr-floax}"
   tmux -L "$sock" new-session -d -s "$ws" "$shell -l" 2>/dev/null || true
   tmux -L "$sock" set-option -g mouse on 2>/dev/null || true
