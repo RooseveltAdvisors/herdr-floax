@@ -166,7 +166,7 @@ Reload herdr's config (or restart herdr) after changing it.
 | File | Purpose |
 |---|---|
 | `herdr-plugin.toml` | Manifest: the `[[panes]]` entry (the TUI app) + the `toggle` `[[actions]]` + `[[build]]`. |
-| `src/` | The Rust TUI: centered box, embedded shell PTY, vt100 rendering, resize. |
+| `src/` | The Rust TUI: centered box, embedded shell PTY, vt100 rendering + scrollback, input dispatch, resize. |
 | `scripts/toggle-floating.sh` | The action: open ↔ reveal ↔ dismiss, per workspace. |
 | `scripts/floating-shell.sh` | The embedded program: a login shell (detach-wrapped when possible). |
 | `scripts/install-keybinding.sh` | Idempotently installs the default, overridable keybind. |

@@ -11,7 +11,7 @@ ratatui = "0.29"
 # The embedded terminal: portable-pty spawns the shell PTY, vt100 emulates it.
 portable-pty = "0.8"
 vt100 = "0.15"
-# SIGWINCH → re-layout + PTY resize (input is raw stdin passthrough, not events).
+# SIGWINCH → re-layout + PTY resize (input is byte-level stdin, not key events).
 signal-hook = "0.3"
 
 # vt100 0.15's `Grid::visible_rows` computes `rows - scrollback_offset`, which

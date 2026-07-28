@@ -398,7 +398,12 @@ fn handle_token(
     match action {
         Action::Forward => {
             let out = match tok {
-                Token::Mouse { button, press, x, y } => {
+                Token::Mouse {
+                    button,
+                    press,
+                    x,
+                    y,
+                } => {
                     let rect = *inner.lock().unwrap();
                     match to_inner(x, y, rect) {
                         Some((ix, iy)) => sgr_mouse_bytes(button, press, ix, iy),
@@ -655,9 +660,7 @@ mod tests {
     fn harness() -> (Vec<u8>, Arc<Mutex<vt100::Parser>>, Arc<Mutex<Rect>>) {
         (
             Vec::new(),
-            Arc::new(Mutex::new(vt100::Parser::new(
-                BOX.height, BOX.width, 1000,
-            ))),
+            Arc::new(Mutex::new(vt100::Parser::new(BOX.height, BOX.width, 1000))),
             Arc::new(Mutex::new(BOX)),
         )
     }
@@ -675,7 +678,10 @@ mod tests {
         // A read that coalesces a bare ESC with a wheel event: the ESC is
         // input, the SGR sequence must not leak into the shell as raw bytes.
         let (_, parser, geom) = harness();
-        parser.lock().unwrap().process(b"a\r\n".repeat(200).as_slice());
+        parser
+            .lock()
+            .unwrap()
+            .process(b"a\r\n".repeat(200).as_slice());
         let out = run(b"\x1b\x1b[<64;10;10M", &parser, &geom);
         assert_eq!(out, b"\x1b");
         assert_eq!(
@@ -695,7 +701,10 @@ mod tests {
     #[test]
     fn passthrough_before_a_scroll_token_snaps_the_view_back() {
         let (_, parser, geom) = harness();
-        parser.lock().unwrap().process(b"a\r\n".repeat(200).as_slice());
+        parser
+            .lock()
+            .unwrap()
+            .process(b"a\r\n".repeat(200).as_slice());
         run(b"\x1b[5~", &parser, &geom);
         assert!(parser.lock().unwrap().screen().scrollback() > 0);
         // Typing returns to the live bottom.
@@ -709,7 +718,10 @@ mod tests {
         // Regression: vt100 before 0.16 underflowed once the scrollback offset
         // passed the visible row count, which two PgUp presses reach.
         let (_, parser, geom) = harness();
-        parser.lock().unwrap().process(b"a\r\n".repeat(500).as_slice());
+        parser
+            .lock()
+            .unwrap()
+            .process(b"a\r\n".repeat(500).as_slice());
         for _ in 0..3 {
             run(b"\x1b[5~", &parser, &geom);
         }

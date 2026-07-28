@@ -205,7 +205,11 @@ fn main() -> std::io::Result<()> {
         default_hook(info);
     }));
     enable_raw_mode()?;
-    execute!(std::io::stdout(), EnterAlternateScreen, Print(input::MOUSE_ENABLE))?;
+    execute!(
+        std::io::stdout(),
+        EnterAlternateScreen,
+        Print(input::MOUSE_ENABLE)
+    )?;
     let mut terminal = Terminal::new(CrosstermBackend::new(std::io::stdout()))?;
 
     let master = pair.master;
