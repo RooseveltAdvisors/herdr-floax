@@ -13,3 +13,18 @@ portable-pty = "0.8"
 vt100 = "0.15"
 # SIGWINCH → re-layout + PTY resize (input is raw stdin passthrough, not events).
 signal-hook = "0.3"
+
+# vt100 0.15's `Grid::visible_rows` computes `rows - scrollback_offset`, which
+# underflows once the scroll view is more than one screen back — the offsets
+# this plugin's own PgUp/wheel scrolling reaches. The wrapped result is what
+# renders the deep-scrollback view correctly (it takes the rows from
+# scrollback instead of the live screen), so the fix is to give vt100 the same
+# wrapping arithmetic in every profile rather than to clamp the offset, which
+# would cap scrolling at one page. Scoped to vt100: this crate keeps its own
+# overflow checks in debug builds. Fixed upstream in vt100 0.16, which we
+# cannot take while ratatui 0.29 pins `unicode-width = "=0.2.0"`.
+[profile.dev.package.vt100]
+overflow-checks = false
+
+[profile.test.package.vt100]
+overflow-checks = false

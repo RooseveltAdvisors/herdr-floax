@@ -113,6 +113,10 @@ fn main() -> std::io::Result<()> {
         inner.width,
         cfg.scrollback_lines,
     )));
+    // The box interior in pane coordinates, kept current across resizes so the
+    // input layer can translate mouse events into the embedded terminal's own
+    // coordinate space.
+    let geom = Arc::new(Mutex::new(inner));
     let (tx, rx) = mpsc::channel::<Ev>();
 
     // PTY output → vt100 parser → redraw.
@@ -142,6 +146,7 @@ fn main() -> std::io::Result<()> {
     // stdin → PTY, with scrollback-scroll interception (PgUp/PgDn, wheel).
     {
         let parser = Arc::clone(&parser);
+        let geom = Arc::clone(&geom);
         let tx = tx.clone();
         let mut writer = pair.master.take_writer().map_err(io_err)?;
         std::thread::spawn(move || {
@@ -167,7 +172,7 @@ fn main() -> std::io::Result<()> {
             let redraw = move || {
                 let _ = tx.send(Ev::Output);
             };
-            input::dispatch(chunk_rx, &mut writer, &parser, &redraw);
+            input::dispatch(chunk_rx, &mut writer, &parser, &geom, &redraw);
         });
     }
 
@@ -228,6 +233,7 @@ fn main() -> std::io::Result<()> {
             let inner = ui::box_inner(Rect::new(0, 0, c, r), &cfg);
             let _ = master.resize(pty_size(inner));
             parser.lock().unwrap().set_size(inner.height, inner.width);
+            *geom.lock().unwrap() = inner;
         }
     }
 
