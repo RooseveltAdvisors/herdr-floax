@@ -1,7 +1,9 @@
 # herdr-floax
 
 A floating scratch shell for the current [herdr](https://herdr.dev) workspace —
-inspired by [`tmux-floax`](https://github.com/omerxx/tmux-floax).
+inspired by [`tmux-floax`](https://github.com/omerxx/tmux-floax). Maintained at
+[`RooseveltAdvisors/herdr-floax`](https://github.com/RooseveltAdvisors/herdr-floax),
+a fork of [`Tyru5/herdr-floax`](https://github.com/Tyru5/herdr-floax).
 
 One keybinding toggles a floating pane: **open → reveal → dismiss**, one
 instance per workspace. The floating pane is a real, fully-interactive herdr
@@ -120,7 +122,7 @@ Env overrides per invocation: `HERDR_FLOAX_WIDTH_PCT`, `HERDR_FLOAX_HEIGHT_PCT`,
 From GitHub (builds with `cargo` at install time):
 
 ```sh
-herdr plugin install Tyru5/herdr-floax
+herdr plugin install RooseveltAdvisors/herdr-floax
 
 # Then install the default keybind (prefix+f) and reload herdr config:
 bash "$(herdr plugin list --plugin herdr-floax --json | jq -r '.result.plugins[0].plugin_root')/scripts/install-keybinding.sh"
