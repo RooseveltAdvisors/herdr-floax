@@ -36,7 +36,7 @@ Because the shell is a first-class herdr pane on the primary screen:
 | **`C-u` / `C-d`** (in copy mode) | Half-page scroll through floax scrollback |
 | **Mouse wheel** (no mouse reporting) | Herdr host-scrolls the pane scrollback |
 | **Drag select** | Ordinary herdr selection on visible cells |
-| **PgUp / PgDn** (live, not in copy mode) | Herdr host scrollback (primary-screen pane) |
+| **PgUp / PgDn** (live, not in copy mode) | Herdr host scrollback only while the shell is not in application-cursor mode — `zsh`/`bash` line editors usually claim these keys, so use copy mode |
 
 This matches the tmux-floax idea that the floating shell is a **real pane**
 with host-owned history — not an alternate-screen app herdr cannot scroll.
@@ -55,9 +55,10 @@ install a raw PTY multiplexer that does **not** use the alternate screen:
 
 - **`dtach`** (preferred) or **`abduco`** — reattach the same session on open
 - **neither installed** — each open starts a fresh login shell
-- **`HERDR_FLOAX_USE_TMUX=1`** — optional legacy: wrap in tmux (inner tmux
-  copy mode works; **herdr** copy mode will **not** see that history, because
-  `tmux attach` uses the alternate screen)
+- **`HERDR_FLOAX_USE_TMUX=1`** — optional legacy: wrap in tmux instead, even
+  when dtach/abduco are installed (inner tmux copy mode works; **herdr** copy
+  mode will **not** see that history, because `tmux attach` uses the alternate
+  screen). Set it in herdr's own environment — see [Configuration](#configuration)
 
 ## Limitations
 
@@ -75,17 +76,21 @@ visually but does not participate in tiled-pane copy mode (see comments in
 
 ## Configuration
 
-Optional example file: `floax.conf.example` (copy under
-`herdr plugin config-dir herdr-floax` if you want a local note of defaults).
-0.4.0 does not require a config file for sizing.
+`floax.conf.example` is documentation only — 0.4.0 reads no config file, and
+behaviour is controlled entirely by the environment variables below.
 
 Env:
 
 | Variable | Meaning |
 |---|---|
 | `HERDR_FLOAX_CWD` | Starting directory (set by the toggle script) |
-| `HERDR_FLOAX_USE_TMUX=1` | Opt into tmux-wrapped shell (breaks host copy mode) |
+| `HERDR_FLOAX_USE_TMUX=1` | Opt into tmux-wrapped shell (breaks host copy mode); takes precedence over dtach/abduco |
 | `HERDR_FLOAX_TMUX_SOCKET` | tmux socket name when tmux path is enabled |
+
+The pane inherits **herdr's** environment, so the two tmux knobs must be set
+where herdr itself starts (`HERDR_FLOAX_USE_TMUX=1 herdr …`, or your login
+shell profile) — exporting them in a shell running *inside* herdr does not
+reach the floating pane.
 
 ## Install
 

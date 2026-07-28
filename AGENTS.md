@@ -11,7 +11,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - **Why not default `tmux attach`:** tmux clients use the alternate screen, so herdr’s primary-screen scrollback/copy-mode stay empty. Persistence without alt-screen: `dtach` or `abduco`. `HERDR_FLOAX_USE_TMUX=1` opts back into tmux (inner copy mode only).
 - **herdr scrolling contract (0.7.5):** scrollback from primary screen only; `wheel_routing` = MouseReport | AlternateScroll | HostScroll; plain PgUp/PgDn stolen by host only on primary + no mouse + no app cursor.
 - **Legacy nested TUI:** `src/` + `Cargo.toml` remain from 0.3.x but are not the pane command and are not built at plugin install. Prefer deleting in a follow-up once 0.4.0 is confirmed.
-- **Lab isolation:** `fm-herdr-lab.sh`; never touch default session. Link worktree with `plugin link`. Drive with `pane send-text` / `send-keys`. After manifest changes, re-link or reload so herdr picks up the new command.
+- **Lab isolation:** never test against a live herdr/default session. Run a second herdr with scrubbed env (`env -i HOME=… XDG_CONFIG_HOME=<tmp> XDG_STATE_HOME=<tmp>`, no `HERDR_*`) inside its own tmux session, `herdr plugin link <worktree>` against it, and set `HERDR_FLOAX_TMUX_SOCKET` to a throwaway name so the tmux opt-in can never attach the real `herdr-floax` socket. Drive it with `herdr pane send-text` / `tmux send-keys`. After manifest changes, re-link or reload so herdr picks up the new command.
 - **No cargo required** for the 0.4.0 pane path. Shellcheck the scripts; there is no `cargo test` gate for the live path.
 
 ## Maintaining this file

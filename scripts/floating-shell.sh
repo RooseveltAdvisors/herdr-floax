@@ -13,9 +13,12 @@
 #   plain shell if neither is installed (fresh session each open).
 #
 # Optional legacy path:
-#   HERDR_FLOAX_USE_TMUX=1 falls back to a per-workspace tmux session (alt
-#   screen). That restores tmux-style inner copy mode but breaks herdr host
-#   copy mode / scrollback — only for users who explicitly want it.
+#   HERDR_FLOAX_USE_TMUX=1 uses a per-workspace tmux session (alt screen)
+#   instead of dtach/abduco. That restores tmux-style inner copy mode but
+#   breaks herdr host copy mode / scrollback — only for users who explicitly
+#   want it, so it is checked before the auto-detected multiplexers.
+#   Both it and HERDR_FLOAX_TMUX_SOCKET must be set in herdr's own environment
+#   (the pane inherits herdr's env; exporting them inside a pane has no effect).
 #
 # Starting directory arrives via $HERDR_FLOAX_CWD (not herdr --cwd): in herdr
 # 0.7.1, `plugin pane open --cwd` made the pane exit immediately.
@@ -27,6 +30,18 @@ state_dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
 
 cd "${HERDR_FLOAX_CWD:-$HOME}" 2>/dev/null || cd "$HOME" 2>/dev/null || true
 
+# Opt-in tmux path first: an explicit request wins over auto-detected dtach or
+# abduco (alternate screen — herdr copy mode will not see that history).
+if [ "${HERDR_FLOAX_USE_TMUX:-}" = "1" ]; then
+  if command -v tmux >/dev/null 2>&1; then
+    sock="${HERDR_FLOAX_TMUX_SOCKET:-herdr-floax}"
+    tmux -L "$sock" new-session -d -s "$ws" "$shell -l" 2>/dev/null || true
+    tmux -L "$sock" set-option -g mouse on 2>/dev/null || true
+    exec tmux -L "$sock" attach-session -t "$ws"
+  fi
+  printf 'herdr-floax: HERDR_FLOAX_USE_TMUX=1 but tmux is not installed; falling back.\n' >&2
+fi
+
 # dtach: attach-or-create (-A); -z disables the suspend key. Raw PTY — primary
 # screen, herdr keeps scrollback.
 if command -v dtach >/dev/null 2>&1; then
@@ -36,14 +51,6 @@ fi
 # abduco: -A attach-or-create a session named per workspace.
 if command -v abduco >/dev/null 2>&1; then
   exec abduco -A "floax-$ws" "$shell" -l
-fi
-
-# Opt-in tmux path (alternate screen — herdr copy mode will not see history).
-if [ "${HERDR_FLOAX_USE_TMUX:-}" = "1" ] && command -v tmux >/dev/null 2>&1; then
-  sock="${HERDR_FLOAX_TMUX_SOCKET:-herdr-floax}"
-  tmux -L "$sock" new-session -d -s "$ws" "$shell -l" 2>/dev/null || true
-  tmux -L "$sock" set-option -g mouse on 2>/dev/null || true
-  exec tmux -L "$sock" attach-session -t "$ws"
 fi
 
 exec "$shell" -l

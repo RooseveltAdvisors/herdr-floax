@@ -14,5 +14,6 @@
 # Opt-in legacy: HERDR_FLOAX_USE_TMUX=1 wraps the shell in tmux (inner copy
 # mode works; herdr host copy mode will not see history).
 
-# Display-only hint for docs / install-keybinding defaults.
+# Display-only note of the default keybind. Nothing reads this file in 0.4.0 —
+# install-keybinding.sh takes the key from its first argument or $HERDR_FLOAX_KEY.
 key_hint = prefix+f
