@@ -7,22 +7,8 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 fails=0
 
-assert_contains() {
-  local pattern="$1"
-  if grep -Fq -- "$pattern" "$script"; then
-    echo "ok   — found: $pattern"
-  else
-    echo "FAIL — missing: $pattern"
-    fails=$((fails + 1))
-  fi
-}
-
-assert_contains "[ -x \"\$HERDR_BIN_PATH\" ]"
-assert_contains 'command -v herdr'
-assert_contains 'exit 127'
-
 if ! command -v jq >/dev/null 2>&1; then
-  echo "FAIL — jq is required for the fallback behavior check"
+  echo "FAIL - jq is required for the fallback behavior check"
   exit 1
 fi
 
@@ -39,30 +25,46 @@ EOF
 chmod +x "$tmp/bin/herdr"
 : > "$tmp/stale-herdr"
 
+cp "$tmp/bin/herdr" "$tmp/path-herdr"
+chmod +x "$tmp/path-herdr"
+if HERDR_BIN_PATH="$tmp/path-herdr" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
+    HERDR_LOG="$tmp/path.log" PATH="$tmp/bin:/usr/bin:/bin" \
+    /usr/bin/bash "$script" >"$tmp/path.out" 2>&1; then
+  if grep -Fq 'pane list' "$tmp/path.log" && [ ! -s "$tmp/fallback.log" ]; then
+    echo "ok   - executable HERDR_BIN_PATH is preferred"
+  else
+    echo "FAIL - executable HERDR_BIN_PATH was not preferred"
+    fails=$((fails + 1))
+  fi
+else
+  echo "FAIL - executable HERDR_BIN_PATH exited non-zero: $(<"$tmp/path.out")"
+  fails=$((fails + 1))
+fi
+
 if HERDR_BIN_PATH="$tmp/stale-herdr" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
     HERDR_LOG="$tmp/fallback.log" PATH="$tmp/bin:/usr/bin:/bin" \
     /usr/bin/bash "$script" >"$tmp/fallback.out" 2>&1; then
   if grep -Fq 'pane list' "$tmp/fallback.log"; then
-    echo "ok   — stale HERDR_BIN_PATH falls back to PATH herdr"
+    echo "ok   - stale HERDR_BIN_PATH falls back to PATH herdr"
   else
-    echo "FAIL — fallback herdr was not invoked"
+    echo "FAIL - fallback herdr was not invoked"
     fails=$((fails + 1))
   fi
 else
-  echo "FAIL — stale HERDR_BIN_PATH fallback exited non-zero: $(cat "$tmp/fallback.out")"
+  echo "FAIL - stale HERDR_BIN_PATH fallback exited non-zero: $(<"$tmp/fallback.out")"
   fails=$((fails + 1))
 fi
 
 if HERDR_BIN_PATH="$tmp/stale-herdr" PATH="$tmp/no-herdr" \
     /usr/bin/bash "$script" >"$tmp/missing.out" 2>&1; then
-  echo "FAIL — missing herdr unexpectedly succeeded"
+  echo "FAIL - missing herdr unexpectedly succeeded"
   fails=$((fails + 1))
 else
   status=$?
   if [ "$status" -eq 127 ] && grep -Fq 'no executable herdr binary found' "$tmp/missing.out"; then
-    echo "ok   — missing herdr reports an error and exits 127"
+    echo "ok   - missing herdr reports an error and exits 127"
   else
-    echo "FAIL — missing herdr returned $status: $(cat "$tmp/missing.out")"
+    echo "FAIL - missing herdr returned $status: $(<"$tmp/missing.out")"
     fails=$((fails + 1))
   fi
 fi
