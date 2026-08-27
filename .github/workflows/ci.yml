@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck scripts/*.sh
+      - run: bash -n scripts/*.sh
+      - run: |
+          if output=$(PATH=/nonexistent HERDR_BIN_PATH=/bin/sh bash scripts/toggle-floating.sh 2>&1); then exit 1; fi
+          grep -Fq "'jq' is required" <<< "$output"
