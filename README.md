@@ -87,6 +87,11 @@ Env:
 | `HERDR_FLOAX_USE_TMUX=1` | Opt into tmux-wrapped shell (breaks host copy mode); takes precedence over dtach/abduco |
 | `HERDR_FLOAX_TMUX_SOCKET` | tmux socket name when tmux path is enabled |
 
+The toggle action uses herdr's injected `HERDR_BIN_PATH` when it points to an
+executable file. If that path is stale or unset, it resolves `herdr` from
+`PATH`; if neither is available, it reports an error and exits with status
+127.
+
 The pane inherits **herdr's** environment, so the two tmux knobs must be set
 where herdr itself starts (`HERDR_FLOAX_USE_TMUX=1 herdr …`, or your login
 shell profile) — exporting them in a shell running *inside* herdr does not
