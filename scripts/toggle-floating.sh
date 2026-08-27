@@ -17,7 +17,7 @@
 set -uo pipefail
 
 LABEL="⌂ floax"
-if [ -n "${HERDR_BIN_PATH:-}" ] && [ -x "$HERDR_BIN_PATH" ]; then
+if [ -f "${HERDR_BIN_PATH:-}" ] && [ -x "$HERDR_BIN_PATH" ]; then
   herdr="$HERDR_BIN_PATH"
 else
   herdr="$(command -v herdr || true)"

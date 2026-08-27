@@ -27,6 +27,7 @@ chmod +x "$tmp/bin/herdr"
 
 cp "$tmp/bin/herdr" "$tmp/path-herdr"
 chmod +x "$tmp/path-herdr"
+mkdir -p "$tmp/herdr-dir"
 if HERDR_BIN_PATH="$tmp/path-herdr" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
     HERDR_LOG="$tmp/path.log" PATH="$tmp/bin:/usr/bin:/bin" \
     /usr/bin/bash "$script" >"$tmp/path.out" 2>&1; then
@@ -38,6 +39,20 @@ if HERDR_BIN_PATH="$tmp/path-herdr" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source
   fi
 else
   echo "FAIL - executable HERDR_BIN_PATH exited non-zero: $(<"$tmp/path.out")"
+  fails=$((fails + 1))
+fi
+
+if HERDR_BIN_PATH="$tmp/herdr-dir" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
+    HERDR_LOG="$tmp/dir-fallback.log" PATH="$tmp/bin:/usr/bin:/bin" \
+    /usr/bin/bash "$script" >"$tmp/dir-fallback.out" 2>&1; then
+  if grep -Fq 'herdr pane list' "$tmp/dir-fallback.log"; then
+    echo "ok   - directory HERDR_BIN_PATH falls back to PATH herdr"
+  else
+    echo "FAIL - directory HERDR_BIN_PATH was selected"
+    fails=$((fails + 1))
+  fi
+else
+  echo "FAIL - directory HERDR_BIN_PATH fallback exited non-zero: $(<"$tmp/dir-fallback.out")"
   fails=$((fails + 1))
 fi
 
