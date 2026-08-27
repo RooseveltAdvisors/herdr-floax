@@ -17,7 +17,16 @@
 set -uo pipefail
 
 LABEL="⌂ floax"
-herdr="${HERDR_BIN_PATH:-herdr}"
+if [ -f "${HERDR_BIN_PATH:-}" ] && [ -x "$HERDR_BIN_PATH" ]; then
+  herdr="$HERDR_BIN_PATH"
+else
+  herdr="$(command -v herdr || true)"
+fi
+
+if [ -z "$herdr" ]; then
+  echo "herdr-floax: no executable herdr binary found (HERDR_BIN_PATH is stale or unset)" >&2
+  exit 127
+fi
 
 # jq is required to parse the pane-list JSON. Fail loudly with a fix hint.
 if ! command -v jq >/dev/null 2>&1; then
