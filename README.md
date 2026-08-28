@@ -76,8 +76,24 @@ visually but does not participate in tiled-pane copy mode (see comments in
 
 ## Configuration
 
-`floax.conf.example` is documentation only — 0.4.0 reads no config file, and
-behaviour is controlled entirely by the environment variables below.
+Optional command profiles live in `~/.config/herdr/floax.conf`:
+
+```toml
+[profile.quota]
+command = "while :; do quota-axi; sleep 60; done"
+```
+
+The command is shell syntax, runs inside the persistent primary-screen session,
+and returns to the normal login shell when it exits. Each profile has its own
+persistent session, so switching from the default shell to a profile starts
+the configured command instead of reattaching the default session. A profile
+is applied only on a fresh open; revealing an existing pane does not replace
+its process.
+`herdr-floax.toggle-cmd` uses the `quota` profile. The example uses a plain
+text loop because `quota-axi --refresh` currently requires `--tui`, which would
+put the command on the alternate screen and defeat floax copy mode.
+
+`floax.conf.example` is a copyable example of this syntax.
 
 Env:
 
@@ -138,15 +154,25 @@ command = "herdr-floax.toggle"
 description = "Toggle floating pane"
 ```
 
+For the built-in quota profile:
+
+```toml
+[[keys.command]]
+key = "prefix+u"
+type = "plugin_action"
+command = "herdr-floax.toggle-cmd"
+description = "quota (floax)"
+```
+
 Reload herdr config after changing it.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `herdr-plugin.toml` | Manifest: `[[panes]]` (shell script) + `toggle` action |
+| `herdr-plugin.toml` | Manifest: `[[panes]]` (shell script) + toggle actions |
 | `scripts/toggle-floating.sh` | open ↔ reveal ↔ dismiss, per workspace |
-| `scripts/floating-shell.sh` | login shell; dtach/abduco when available |
+| `scripts/floating-shell.sh` | profile command, then login shell; dtach/abduco when available |
 | `scripts/install-keybinding.sh` | default keybind installer |
-| `floax.conf.example` | legacy 0.3.x keys, no longer read (points here) |
+| `floax.conf.example` | command-profile example |
 | `src/` | legacy 0.3.x nested TUI (not used as the pane command) |

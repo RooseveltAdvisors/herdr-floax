@@ -40,3 +40,9 @@ id = "toggle"
 title = "Toggle floating pane"
 description = "Open, reveal, or dismiss the floating scratch shell for this workspace."
 command = ["bash", "scripts/toggle-floating.sh"]
+
+[[actions]]
+id = "toggle-cmd"
+title = "Toggle quota in floating pane"
+description = "Open, reveal, or dismiss the quota profile in the floating pane."
+command = ["bash", "scripts/toggle-floating.sh", "quota"]
