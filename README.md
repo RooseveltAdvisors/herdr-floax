@@ -34,15 +34,15 @@ zoom. Dismissing floax restores that pane's zoom if it still exists.
 Because the shell is a first-class herdr pane on the primary screen:
 
 | Action | Result |
-|---|---|
+| --- | --- |
 | **herdr copy mode** (e.g. `prefix+j`) | Enters copy mode on floax history |
 | **`C-u` / `C-d`** (in copy mode) | Half-page scroll through floax scrollback |
-| **Mouse wheel** (no mouse reporting) | Herdr host-scrolls the pane scrollback |
+| **Mouse wheel** (no mouse reporting) | Host-scrolls floax scrollback |
 | **Drag select** | Ordinary herdr selection on visible cells |
-| **PgUp / PgDn** (live, not in copy mode) | Herdr host scrollback only while the shell is not in application-cursor mode — `zsh`/`bash` line editors usually claim these keys, so use copy mode |
+| **PgUp / PgDn** (live) | Host scrollback outside application-cursor mode |
 
 This matches the tmux-floax idea that the floating shell is a **real pane**
-with host-owned history — not an alternate-screen app herdr cannot scroll.
+with host-owned history, not an alternate-screen app herdr cannot scroll.
 
 ### Why 0.4.0 dropped the nested TUI
 
@@ -56,9 +56,9 @@ and tried to own PgUp/wheel inside the plugin. That blocked herdr copy mode
 Dismiss **closes** the herdr pane. To keep the same shell across toggles,
 install a raw PTY multiplexer that does **not** use the alternate screen:
 
-- **`dtach`** (preferred) or **`abduco`** — reattach the same session on open
-- **neither installed** — each open starts a fresh login shell
-- **`HERDR_FLOAX_USE_TMUX=1`** — optional legacy: wrap in tmux instead, even
+- **`dtach`** (preferred) or **`abduco`** - reattach the same session on open
+- **neither installed** - each open starts a fresh login shell
+- **`HERDR_FLOAX_USE_TMUX=1`** - optional legacy: wrap in tmux instead, even
   when dtach/abduco are installed (inner tmux copy mode works; **herdr** copy
   mode will **not** see that history, because `tmux attach` uses the alternate
   screen). Set it in herdr's own environment — see [Configuration](#configuration)
@@ -105,9 +105,9 @@ primary screen for Herdr copy mode. `quota-axi --refresh` currently requires
 Env:
 
 | Variable | Meaning |
-|---|---|
+| --- | --- |
 | `HERDR_FLOAX_CWD` | Starting directory (set by the toggle script) |
-| `HERDR_FLOAX_USE_TMUX=1` | Opt into tmux-wrapped shell (breaks host copy mode); takes precedence over dtach/abduco |
+| `HERDR_FLOAX_USE_TMUX=1` | Opt into tmux; takes precedence over dtach/abduco |
 | `HERDR_FLOAX_TMUX_SOCKET` | tmux socket name when tmux path is enabled |
 
 The toggle action uses herdr's injected `HERDR_BIN_PATH` when it points to an
@@ -186,10 +186,10 @@ Reload herdr config after changing it.
 ## Files
 
 | File | Purpose |
-|---|---|
-| `herdr-plugin.toml` | Manifest: `[[panes]]` (shell script) + toggle actions |
-| `scripts/toggle-floating.sh` | open ↔ reveal ↔ dismiss, zoom-preserving per workspace |
-| `scripts/floating-shell.sh` | profile command, then login shell; dtach/abduco when available |
+| --- | --- |
+| `herdr-plugin.toml` | Manifest: pane (shell script) and toggle actions |
+| `scripts/toggle-floating.sh` | open, reveal, dismiss; preserves zoom |
+| `scripts/floating-shell.sh` | profile command, login shell, and persistence |
 | `scripts/install-keybinding.sh` | default keybind installer |
 | `floax.conf.example` | command-profile example |
 | `src/` | legacy 0.3.x nested TUI (not used as the pane command) |
