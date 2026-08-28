@@ -34,7 +34,13 @@ if HOME="$tmp/home" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
     HERDR_LOG="$log" PATH="$tmp/bin:$jq_dir:/usr/bin:/bin" \
     /usr/bin/bash "$script" quota >"$tmp/out" 2>&1; then
   if grep -Fq -- "<--env> <HERDR_FLOAX_COMMAND=printf '# ready'>" "$log"; then
-    echo "ok   - selected profile command reaches fresh pane open"
+    if grep -Fq -- "<--env> <HERDR_FLOAX_SESSION=quota>" "$log"; then
+      echo "ok   - selected profile command reaches fresh pane open"
+    else
+      echo "FAIL - selected profile session identity was not passed to pane open"
+      cat "$log"
+      exit 1
+    fi
   else
     echo "FAIL - selected profile command was not passed to pane open"
     cat "$log"

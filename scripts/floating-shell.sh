@@ -28,6 +28,7 @@ set -u
 
 shell="${SHELL:-/bin/sh}"
 ws="${HERDR_WORKSPACE_ID:-default}"
+session="${HERDR_FLOAX_SESSION:-default}"
 state_dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
 
 cd "${HERDR_FLOAX_CWD:-$HOME}" 2>/dev/null || cd "$HOME" 2>/dev/null || true
@@ -49,9 +50,9 @@ if [ "${HERDR_FLOAX_USE_TMUX:-}" = "1" ]; then
     else
       tmux_command="$shell -l"
     fi
-    tmux -L "$sock" new-session -d -s "$ws" "$tmux_command" 2>/dev/null || true
+    tmux -L "$sock" new-session -d -s "$ws-$session" "$tmux_command" 2>/dev/null || true
     tmux -L "$sock" set-option -g mouse on 2>/dev/null || true
-    exec tmux -L "$sock" attach-session -t "$ws"
+    exec tmux -L "$sock" attach-session -t "$ws-$session"
   fi
   printf 'herdr-floax: HERDR_FLOAX_USE_TMUX=1 but tmux is not installed; falling back.\n' >&2
 fi
@@ -59,12 +60,12 @@ fi
 # dtach: attach-or-create (-A); -z disables the suspend key. Raw PTY — primary
 # screen, herdr keeps scrollback.
 if command -v dtach >/dev/null 2>&1; then
-  exec dtach -A "$state_dir/floax-$ws.dtach" -z "${session_command[@]}"
+  exec dtach -A "$state_dir/floax-$ws-$session.dtach" -z "${session_command[@]}"
 fi
 
 # abduco: -A attach-or-create a session named per workspace.
 if command -v abduco >/dev/null 2>&1; then
-  exec abduco -A "floax-$ws" "${session_command[@]}"
+  exec abduco -A "floax-$ws-$session" "${session_command[@]}"
 fi
 
 exec "${session_command[@]}"

@@ -17,3 +17,4 @@ jobs:
           if output=$(PATH=/nonexistent HERDR_BIN_PATH=/bin/sh /bin/bash scripts/toggle-floating.sh 2>&1); then exit 1; fi
           grep -Fq "'jq' is required" <<< "$output"
       - run: bash tests/toggle-floating-profile.sh
+      - run: bash tests/floating-shell-profile-session.sh

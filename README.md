@@ -84,8 +84,11 @@ command = "while :; do quota-axi; sleep 60; done"
 ```
 
 The command is shell syntax, runs inside the persistent primary-screen session,
-and returns to the normal login shell when it exits. A profile is applied only
-on a fresh open; revealing an existing pane does not replace its process.
+and returns to the normal login shell when it exits. Each profile has its own
+persistent session, so switching from the default shell to a profile starts
+the configured command instead of reattaching the default session. A profile
+is applied only on a fresh open; revealing an existing pane does not replace
+its process.
 `herdr-floax.toggle-cmd` uses the `quota` profile. The example uses a plain
 text loop because `quota-axi --refresh` currently requires `--tui`, which would
 put the command on the alternate screen and defeat floax copy mode.

@@ -146,6 +146,7 @@ open_pane() {
     fi
     set -- "$@" --env "HERDR_FLOAX_COMMAND=$command"
   fi
+  set -- "$@" --env "HERDR_FLOAX_SESSION=${profile:-default}"
   local out pid
   out="$("$herdr" "$@" 2>/dev/null)"
   pid="$(printf '%s' "$out" | jq -r '.result.plugin_pane.pane.pane_id // empty')"
