@@ -115,6 +115,52 @@ if [ -z "$ws" ]; then
   ws="$("$herdr" pane current 2>/dev/null | jq -r '.result.pane.workspace_id // empty')"
 fi
 
+state_dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
+zoom_state="$state_dir/floax-zoom-$ws"
+
+save_zoom() {
+  local target="${1:-}" excluded="${2:-}" zoomed
+  [ -n "$ws" ] || return 0
+  [ -e "$zoom_state" ] && return 0
+  if [ -n "$target" ]; then
+    zoomed="$("$herdr" pane layout --pane "$target" 2>/dev/null \
+      | jq -r '.result.layout | select(.zoomed == true) | .focused_pane_id // empty' 2>/dev/null)"
+  else
+    zoomed="$("$herdr" pane layout --current 2>/dev/null \
+      | jq -r '.result.layout | select(.zoomed == true) | .focused_pane_id // empty' 2>/dev/null)"
+  fi
+  if [ -n "$zoomed" ] && [ "$zoomed" != "$excluded" ]; then
+    mkdir -p "$state_dir"
+    printf '%s\n' "$zoomed" > "$zoom_state"
+  fi
+}
+
+restore_zoom() {
+  local saved panes
+  [ -f "$zoom_state" ] || return 0
+  saved="$(<"$zoom_state")"
+  [ -n "$saved" ] || {
+    rm -f "$zoom_state"
+    return 0
+  }
+  panes="$("$herdr" pane list --workspace "$ws" 2>/dev/null)" || return 1
+  if ! printf '%s' "$panes" | jq -e '.result.panes | type == "array"' \
+      >/dev/null 2>&1; then
+    return 1
+  fi
+  if printf '%s' "$panes" \
+      | jq -e --arg id "$saved" '.result.panes[] | select(.pane_id == $id)' \
+      >/dev/null 2>&1; then
+    if "$herdr" pane zoom "$saved" --on >/dev/null 2>&1; then
+      rm -f "$zoom_state"
+      return 0
+    fi
+    return 1
+  else
+    rm -f "$zoom_state"
+  fi
+}
+
 open_pane() {
   # Which pane are we launching from? Needed as the split's target and to
   # inherit its cwd. Prefer the injected id; fall back to the focused pane.
@@ -146,11 +192,20 @@ open_pane() {
     fi
     set -- "$@" --env "HERDR_FLOAX_COMMAND=$command"
   fi
+  save_zoom "$target"
   set -- "$@" --env "HERDR_FLOAX_SESSION=${profile:-default}"
-  local out pid
+  local out pid open_status parse_status
   out="$("$herdr" "$@" 2>/dev/null)"
+  open_status=$?
+  if [ "$open_status" -ne 0 ]; then
+    return "$open_status"
+  fi
   pid="$(printf '%s' "$out" | jq -r '.result.plugin_pane.pane.pane_id // empty')"
-  [ -n "$pid" ] && "$herdr" pane zoom "$pid" --on >/dev/null 2>&1
+  parse_status=$?
+  if [ "$parse_status" -ne 0 ] || [ -z "$pid" ]; then
+    return 1
+  fi
+  "$herdr" pane zoom "$pid" --on >/dev/null 2>&1
   exit 0
 }
 
@@ -172,8 +227,16 @@ pid="${found#* }"
 if [ "$focused" = "true" ]; then
   # Currently shown (focused + maximized) → dismiss. floating-shell.sh keeps
   # the session alive when dtach/abduco is available.
-  exec "$herdr" plugin pane close "$pid"
+  "$herdr" plugin pane close "$pid"
+  close_status=$?
+  if [ "$close_status" -eq 0 ]; then
+    restore_zoom_status=0
+    restore_zoom || restore_zoom_status=$?
+    [ "$restore_zoom_status" -ne 0 ] && exit "$restore_zoom_status"
+  fi
+  exit "$close_status"
 else
   # Exists but you focused away (so it un-maximized) → reveal.
+  save_zoom "$pid" "$pid"
   exec "$herdr" pane zoom "$pid" --on
 fi

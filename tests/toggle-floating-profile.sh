@@ -12,6 +12,9 @@ command = "other-command"
 
 [profile.quota]
 command = "printf '# ready'"
+
+[profile.quota-plain]
+command = "plain-command"
 EOF
 cat > "$tmp/bin/herdr" <<'EOF'
 #!/usr/bin/env bash
@@ -48,5 +51,22 @@ if HOME="$tmp/home" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
   fi
 else
   echo "FAIL - profile open failed: $(<"$tmp/out")"
+  exit 1
+fi
+
+: > "$log"
+if HOME="$tmp/home" HERDR_WORKSPACE_ID=test HERDR_PANE_ID=source \
+    HERDR_LOG="$log" PATH="$tmp/bin:$jq_dir:/usr/bin:/bin" \
+    /usr/bin/bash "$script" quota-plain >"$tmp/out" 2>&1; then
+  if grep -Fq -- "<--env> <HERDR_FLOAX_COMMAND=plain-command>" "$log" &&
+     grep -Fq -- "<--env> <HERDR_FLOAX_SESSION=quota-plain>" "$log"; then
+    echo "ok   - plain profile command and session reach fresh pane open"
+  else
+    echo "FAIL - plain profile was not passed to pane open"
+    cat "$log"
+    exit 1
+  fi
+else
+  echo "FAIL - plain profile open failed: $(<"$tmp/out")"
   exit 1
 fi
