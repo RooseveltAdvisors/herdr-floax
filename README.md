@@ -84,9 +84,6 @@ Optional command profiles live in `~/.config/herdr/floax.conf`:
 ```toml
 [profile.quota]
 command = "quota-axi --tui --refresh 1m"
-
-[profile.quota-plain]
-command = "while :; do quota-axi; sleep 60; done"
 ```
 
 The command is shell syntax, runs inside the persistent primary-screen session,
@@ -95,10 +92,9 @@ persistent session, so switching from the default shell to a profile starts
 the configured command instead of reattaching the default session. A profile
 is applied only on a fresh open; revealing an existing pane does not replace
 its process.
-`herdr-floax.toggle-cmd` uses the `quota` TUI profile. The
-`herdr-floax.toggle-plain` action uses `quota-plain`, which keeps output on the
-primary screen for Herdr copy mode. `quota-axi --refresh` currently requires
-`--tui`, so both experiences are available explicitly.
+`herdr-floax.toggle-cmd` uses the `quota` TUI profile. `quota-axi --refresh`
+currently requires `--tui`, so this profile intentionally does not expose its
+history to Herdr copy mode.
 
 `floax.conf.example` is a copyable example of this syntax.
 
@@ -169,16 +165,6 @@ key = "prefix+u"
 type = "plugin_action"
 command = "herdr-floax.toggle-cmd"
 description = "quota (floax)"
-```
-
-For the copy-mode-compatible plain profile:
-
-```toml
-[[keys.command]]
-key = "prefix+shift+u"
-type = "plugin_action"
-command = "herdr-floax.toggle-plain"
-description = "quota plain (floax)"
 ```
 
 Reload herdr config after changing it.
