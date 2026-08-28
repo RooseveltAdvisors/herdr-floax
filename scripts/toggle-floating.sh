@@ -14,9 +14,83 @@
 # action command. Any parse/edge failure degrades to OPEN — never a silent
 # no-op. Persistence across a DISMISS is provided by scripts/floating-shell.sh
 # (dtach/abduco when installed).
+# An optional profile name reads ~/.config/herdr/floax.conf:
+# [profile.<name>]
+# command = "..."
 set -uo pipefail
 
 LABEL="⌂ floax"
+profile="${1:-}"
+
+profile_command() {
+  local name="$1" config="$HOME/.config/herdr/floax.conf"
+  case "$name" in
+    ''|*[!a-zA-Z0-9_:-]*)
+      echo "herdr-floax: invalid profile name: $name" >&2
+      return 1
+      ;;
+  esac
+  [ -f "$config" ] || {
+    echo "herdr-floax: profile config not found: $config" >&2
+    return 1
+  }
+  awk -v wanted="[profile.$name]" '
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+    function without_comment(value,    i,c,escaped,in_string) {
+      for (i = 1; i <= length(value); i++) {
+        c = substr(value, i, 1)
+        if (c == "\\" && in_string && !escaped) {
+          escaped = 1
+          continue
+        }
+        if (c == "\"" && !escaped) in_string = !in_string
+        if (c == "#" && !in_string) return substr(value, 1, i - 1)
+        escaped = 0
+      }
+      return value
+    }
+    function parse_command(value,    i,c,escaped,decoded) {
+      if (substr(value, 1, 1) != "\"" || substr(value, length(value), 1) != "\"") return 0
+      for (i = 2; i < length(value); i++) {
+        c = substr(value, i, 1)
+        if (escaped) {
+          if (c == "\"" || c == "\\") decoded = decoded c
+          else if (c == "n") decoded = decoded "\n"
+          else if (c == "r") decoded = decoded "\r"
+          else if (c == "t") decoded = decoded "\t"
+          else return 0
+          escaped = 0
+        } else if (c == "\\") {
+          escaped = 1
+        } else {
+          decoded = decoded c
+        }
+      }
+      if (escaped) return 0
+      print decoded
+      return 1
+    }
+    {
+      line = trim(without_comment($0))
+      if (substr(line, 1, 1) == "[") {
+        in_profile = (line == wanted)
+        next
+      }
+      if (in_profile && line ~ /^command[[:space:]]*=/) {
+        sub(/^command[[:space:]]*=[[:space:]]*/, "", line)
+        if (!parse_command(line)) exit 2
+        found = 1
+        exit
+      }
+    }
+    END { if (!found && !in_profile) exit 1 }
+  ' "$config"
+}
+
 if [ -f "${HERDR_BIN_PATH:-}" ] && [ -x "$HERDR_BIN_PATH" ]; then
   herdr="$HERDR_BIN_PATH"
 else
@@ -64,6 +138,14 @@ open_pane() {
       --placement split --direction right --env HERDR_FLOAX=1 --focus
   [ -n "$target" ] && set -- "$@" --target-pane "$target"
   [ -n "$cwd" ] && set -- "$@" --env "HERDR_FLOAX_CWD=$cwd"
+  if [ -n "$profile" ]; then
+    local command
+    if ! command="$(profile_command "$profile")" || [ -z "$command" ]; then
+      echo "herdr-floax: profile '$profile' has no non-empty command" >&2
+      exit 1
+    fi
+    set -- "$@" --env "HERDR_FLOAX_COMMAND=$command"
+  fi
   local out pid
   out="$("$herdr" "$@" 2>/dev/null)"
   pid="$(printf '%s' "$out" | jq -r '.result.plugin_pane.pane.pane_id // empty')"

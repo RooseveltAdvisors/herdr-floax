@@ -1,13 +1,5 @@
-# herdr-floax configuration — nothing reads this file as of 0.4.0.
-#
-# The floating pane is a real zoomed herdr terminal, not an app-drawn box, so
-# the 0.3.x nested-TUI keys (width_pct, height_pct, backdrop, scrollback_lines,
-# key_hint) no longer have any effect. Copying this file to the plugin config
-# dir does nothing.
-#
-# Behaviour is controlled entirely by environment variables — see the
-# "Configuration" section of README.md, which owns that list. The keybind comes
-# from scripts/install-keybinding.sh (its first argument or $HERDR_FLOAX_KEY).
-#
-# This file is kept only so 0.3.x configs have somewhere to look; it is a
-# candidate for deletion along with the legacy src/ tree.
+# Copy to ~/.config/herdr/floax.conf, then bind the profile action in herdr.
+# Commands are shell syntax and run before the normal login shell.
+
+[profile.quota]
+command = "while :; do quota-axi; sleep 60; done"

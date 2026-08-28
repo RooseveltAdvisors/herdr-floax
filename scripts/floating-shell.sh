@@ -22,6 +22,8 @@
 #
 # Starting directory arrives via $HERDR_FLOAX_CWD (not herdr --cwd): in herdr
 # 0.7.1, `plugin pane open --cwd` made the pane exit immediately.
+# HERDR_FLOAX_COMMAND is trusted shell syntax from a configured profile. It
+# runs first, then exits into the normal login shell when it finishes.
 set -u
 
 shell="${SHELL:-/bin/sh}"
@@ -30,12 +32,24 @@ state_dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
 
 cd "${HERDR_FLOAX_CWD:-$HOME}" 2>/dev/null || cd "$HOME" 2>/dev/null || true
 
+if [ -n "${HERDR_FLOAX_COMMAND:-}" ]; then
+  # shellcheck disable=SC2016
+  session_command=("$shell" -l -c 'eval "$HERDR_FLOAX_COMMAND"; exec "${SHELL:-/bin/sh}" -l')
+else
+  session_command=("$shell" -l)
+fi
+
 # Opt-in tmux path first: an explicit request wins over auto-detected dtach or
 # abduco (alternate screen — herdr copy mode will not see that history).
 if [ "${HERDR_FLOAX_USE_TMUX:-}" = "1" ]; then
   if command -v tmux >/dev/null 2>&1; then
     sock="${HERDR_FLOAX_TMUX_SOCKET:-herdr-floax}"
-    tmux -L "$sock" new-session -d -s "$ws" "$shell -l" 2>/dev/null || true
+    if [ -n "${HERDR_FLOAX_COMMAND:-}" ]; then
+      tmux_command="$shell -l -c 'eval \"\$HERDR_FLOAX_COMMAND\"; exec \"\${SHELL:-/bin/sh}\" -l'"
+    else
+      tmux_command="$shell -l"
+    fi
+    tmux -L "$sock" new-session -d -s "$ws" "$tmux_command" 2>/dev/null || true
     tmux -L "$sock" set-option -g mouse on 2>/dev/null || true
     exec tmux -L "$sock" attach-session -t "$ws"
   fi
@@ -45,12 +59,12 @@ fi
 # dtach: attach-or-create (-A); -z disables the suspend key. Raw PTY — primary
 # screen, herdr keeps scrollback.
 if command -v dtach >/dev/null 2>&1; then
-  exec dtach -A "$state_dir/floax-$ws.dtach" -z "$shell" -l
+  exec dtach -A "$state_dir/floax-$ws.dtach" -z "${session_command[@]}"
 fi
 
 # abduco: -A attach-or-create a session named per workspace.
 if command -v abduco >/dev/null 2>&1; then
-  exec abduco -A "floax-$ws" "$shell" -l
+  exec abduco -A "floax-$ws" "${session_command[@]}"
 fi
 
-exec "$shell" -l
+exec "${session_command[@]}"
