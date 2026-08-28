@@ -194,14 +194,18 @@ open_pane() {
   fi
   save_zoom "$target"
   set -- "$@" --env "HERDR_FLOAX_SESSION=${profile:-default}"
-  local out pid
+  local out pid open_status parse_status
   out="$("$herdr" "$@" 2>/dev/null)"
-  pid="$(printf '%s' "$out" | jq -r '.result.plugin_pane.pane.pane_id // empty')"
-  if [ -n "$pid" ]; then
-    "$herdr" pane zoom "$pid" --on >/dev/null 2>&1
-  else
-    rm -f "$zoom_state"
+  open_status=$?
+  if [ "$open_status" -ne 0 ]; then
+    return "$open_status"
   fi
+  pid="$(printf '%s' "$out" | jq -r '.result.plugin_pane.pane.pane_id // empty')"
+  parse_status=$?
+  if [ "$parse_status" -ne 0 ] || [ -z "$pid" ]; then
+    return 1
+  fi
+  "$herdr" pane zoom "$pid" --on >/dev/null 2>&1
   exit 0
 }
 
