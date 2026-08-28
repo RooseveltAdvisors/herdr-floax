@@ -2,4 +2,7 @@
 # Commands are shell syntax and run before the normal login shell.
 
 [profile.quota]
+command = "quota-axi --tui --refresh 1m"
+
+[profile.quota-plain]
 command = "while :; do quota-axi; sleep 60; done"

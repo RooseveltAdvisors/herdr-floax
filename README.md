@@ -26,6 +26,9 @@ and immediately **zooms** it so the shell fills the workspace (herdr’s
 `popup` is sized but is not a tiled pane, so herdr copy mode does not target
 it).
 
+Before opening or revealing floax, the toggle saves any existing workspace
+zoom. Dismissing floax restores that pane's zoom if it still exists.
+
 ## Scrolling and copy mode
 
 Because the shell is a first-class herdr pane on the primary screen:
@@ -80,6 +83,9 @@ Optional command profiles live in `~/.config/herdr/floax.conf`:
 
 ```toml
 [profile.quota]
+command = "quota-axi --tui --refresh 1m"
+
+[profile.quota-plain]
 command = "while :; do quota-axi; sleep 60; done"
 ```
 
@@ -89,9 +95,10 @@ persistent session, so switching from the default shell to a profile starts
 the configured command instead of reattaching the default session. A profile
 is applied only on a fresh open; revealing an existing pane does not replace
 its process.
-`herdr-floax.toggle-cmd` uses the `quota` profile. The example uses a plain
-text loop because `quota-axi --refresh` currently requires `--tui`, which would
-put the command on the alternate screen and defeat floax copy mode.
+`herdr-floax.toggle-cmd` uses the `quota` TUI profile. The
+`herdr-floax.toggle-plain` action uses `quota-plain`, which keeps output on the
+primary screen for Herdr copy mode. `quota-axi --refresh` currently requires
+`--tui`, so both experiences are available explicitly.
 
 `floax.conf.example` is a copyable example of this syntax.
 
@@ -164,6 +171,16 @@ command = "herdr-floax.toggle-cmd"
 description = "quota (floax)"
 ```
 
+For the copy-mode-compatible plain profile:
+
+```toml
+[[keys.command]]
+key = "prefix+shift+u"
+type = "plugin_action"
+command = "herdr-floax.toggle-plain"
+description = "quota plain (floax)"
+```
+
 Reload herdr config after changing it.
 
 ## Files
@@ -171,7 +188,7 @@ Reload herdr config after changing it.
 | File | Purpose |
 |---|---|
 | `herdr-plugin.toml` | Manifest: `[[panes]]` (shell script) + toggle actions |
-| `scripts/toggle-floating.sh` | open ↔ reveal ↔ dismiss, per workspace |
+| `scripts/toggle-floating.sh` | open ↔ reveal ↔ dismiss, zoom-preserving per workspace |
 | `scripts/floating-shell.sh` | profile command, then login shell; dtach/abduco when available |
 | `scripts/install-keybinding.sh` | default keybind installer |
 | `floax.conf.example` | command-profile example |

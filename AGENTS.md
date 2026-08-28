@@ -14,7 +14,8 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - **Toggle contract:** `scripts/toggle-floating.sh` is workspace-scoped
   launch-or-reveal/dismiss: absent opens, unfocused reveals and re-zooms,
   focused closes. Keep the split-then-`pane zoom --on` sequence; keybinding
-  actions tear down `overlay`/`zoomed` placements.
+  actions tear down `overlay`/`zoomed` placements. It saves a pre-existing
+  workspace zoom under `HERDR_PLUGIN_STATE_DIR` and restores it on dismiss.
 - **Why not herdr `popup` placement:** stock 0.7.5 popup is session-modal outside the tiled layout; `enter_copy_mode` targets the focused *tiled* pane, and while a popup is open all keys are forwarded into it (prefix never enters copy mode on popup history). Split+zoom is the copy-mode-compatible floating shape.
 - **Why not default `tmux attach`:** tmux clients use the alternate screen, so herdr’s primary-screen scrollback/copy-mode stay empty. Persistence without alt-screen: `dtach` or `abduco`. `HERDR_FLOAX_USE_TMUX=1` opts back into tmux (inner copy mode only).
 - **Injected binary invariant (stale-binary fix):** every consumer of `HERDR_BIN_PATH`
