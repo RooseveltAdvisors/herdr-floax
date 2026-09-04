@@ -179,3 +179,4 @@ Reload herdr config after changing it.
 | `scripts/install-keybinding.sh` | default keybind installer |
 | `floax.conf.example` | command-profile example |
 | `src/` | legacy 0.3.x nested TUI (not used as the pane command) |
+| `VISION.md` | Why this fork exists and what it must never diverge on |
