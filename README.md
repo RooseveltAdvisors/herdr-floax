@@ -10,6 +10,20 @@ instance per workspace. The floating pane is a **real herdr terminal** running
 your login shell — not a nested TUI — so everything that works in a normal
 pane works here, including **herdr copy mode and host scrollback**.
 
+## Demo
+
+`prefix+f` drops a scratch shell over whatever you were doing; `prefix+f` again
+puts it away and leaves your workspace exactly as it was.
+
+![herdr-floax: prefix+f opens a floating scratch shell over the workspace, runs a command, and dismisses it](docs/assets/herdr-floax-demo.gif)
+
+| | |
+| --- | --- |
+| ![herdr workspace running git log before floax is opened](docs/assets/01-workspace.png) | ![the floax pane open and zoomed over the whole workspace](docs/assets/02-floax-open.png) |
+| You are working in a normal herdr pane. | `prefix+f` — the floating scratch shell covers the workspace. |
+| ![ls and wc commands running inside the floax scratch shell](docs/assets/03-scratch-command.png) | ![the original workspace back with its scrollback intact after dismissing floax](docs/assets/04-dismissed.png) |
+| Run the throwaway command you opened it for. | `prefix+f` again — your pane is back, scrollback intact. |
+
 ## How it works
 
 Pressing the key toggles one floating pane per workspace:
