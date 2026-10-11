@@ -29,8 +29,9 @@ puts it away and leaves your workspace exactly as it was.
 Pressing the key toggles one floating pane per workspace:
 
 - **no floating pane yet** → opens a zoomed split hosting your login shell
-- **focused on it** → dismisses it (closes the pane; the shell session can
-  survive — see [Persistence](#persistence))
+  (or restores the previously dismissed one, still running)
+- **focused on it** → dismisses it (parks the live pane in a background
+  workspace - see [Persistence](#persistence))
 - **exists but you focused away** → reveals + re-maximizes it
 
 Under the hood the pane runs `scripts/floating-shell.sh` as a normal herdr
@@ -67,15 +68,25 @@ and tried to own PgUp/wheel inside the plugin. That blocked herdr copy mode
 
 ## Persistence
 
-Dismiss **closes** the herdr pane. To keep the same shell across toggles,
-install a raw PTY multiplexer that does **not** use the alternate screen:
+Dismiss **parks** the pane instead of closing it: the toggle moves the
+still-running shell into its own background workspace (labeled `floax`) with
+`herdr pane move --new-workspace`. The next toggle moves the same pane back
+and re-maximizes it. The shell, its environment, its running processes, and
+its herdr scrollback all survive the toggle, the same way tmux-floax keeps
+its hidden session. The parked workspace closes itself once its pane leaves.
 
-- **`dtach`** (preferred) or **`abduco`** - reattach the same session on open
-- **neither installed** - each open starts a fresh login shell
-- **`HERDR_FLOAX_USE_TMUX=1`** - optional legacy: wrap in tmux instead, even
-  when dtach/abduco are installed (inner tmux copy mode works; **herdr** copy
-  mode will **not** see that history, because `tmux attach` uses the alternate
-  screen). Set it in herdr's own environment — see [Configuration](#configuration)
+No extra install is required for this. Two optional extras still apply:
+
+- **`dtach`** (preferred) or **`abduco`** - a second persistence layer for
+  the shell *inside* the pane, useful when the pane is killed by something
+  other than the toggle (e.g. a manual workspace close)
+- **`HERDR_FLOAX_USE_TMUX=1`** - optional legacy: wrap the pane command in
+  tmux (inner tmux copy mode works; **herdr** copy mode will **not** see that
+  history, because `tmux attach` uses the alternate screen). Set it in
+  herdr's own environment - see [Configuration](#configuration)
+
+If `pane move` is unavailable (herdr older than the park support), dismiss
+degrades to the old close-the-pane behavior.
 
 ## Limitations
 
@@ -149,7 +160,9 @@ bash /path/to/herdr-floax/scripts/install-keybinding.sh
 ```
 
 Requires [`jq`](https://jqlang.github.io/jq/). No Rust toolchain required for
-the 0.4.0 pane path. Optional: `dtach` or `abduco` for session persistence.
+the 0.4.0 pane path. No extras needed for session persistence: dismiss
+parks the live pane via `herdr pane move`. Optional: `dtach` or `abduco` as
+a fallback for non-toggle pane kills.
 
 ## Keybinding
 

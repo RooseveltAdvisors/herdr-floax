@@ -42,6 +42,18 @@ case "$1 $2" in
   "pane zoom")
     printf 'ZOOM %s %s\n' "$3" "$4" >> "$HERDR_LOG"
     ;;
+  "pane move")
+    case "$MODE" in
+      fail)
+        # Simulate a herdr without `pane move`: park fails, toggle falls back.
+        printf '%s\n' '{"result":{"move_result":{"changed":false}}}'
+        ;;
+      *)
+        printf 'PARK %s\n' "$*" >> "$HERDR_LOG"
+        printf '%s\n' '{"result":{"move_result":{"changed":true,"pane":{"pane_id":"parked"}}}}'
+        ;;
+    esac
+    ;;
   "plugin pane")
     if [ "$3" = "open" ]; then
       printf '%s\n' '{"result":{"plugin_pane":{"pane":{"pane_id":"float"}}}}'
@@ -100,20 +112,28 @@ if [ "$(<"$tmp/state/floax-zoom-test")" != "source" ]; then
   exit 1
 fi
 
+lines_before_dismiss="$(wc -l < "$log")"
 run_toggle dismiss
 if [ -e "$tmp/state/floax-zoom-test" ]; then
   echo "FAIL - dismiss did not clear the saved zoom"
   printf '%s\n' "$(<"$log")"
   exit 1
 fi
+if [ "$(<"$tmp/state/floax-parked-test-default")" != "parked" ]; then
+  echo "FAIL - dismiss did not record the parked pane id"
+  printf '%s\n' "$(<"$log")"
+  exit 1
+fi
 
-log_contents="$(<"$log")"
-if [[ "$log_contents" == *"CLOSE float"* &&
-      "$log_contents" == *"pane layout --pane source"* &&
-      "$log_contents" == *"ZOOM source --on"* ]]; then
-  echo "ok   - dismiss restores the pre-floax zoom"
+# Scope the assertion to the dismiss run: earlier fail/restore-fail runs
+# legitimately log a fallback CLOSE attempt.
+dismiss_log="$(tail -n +"$((lines_before_dismiss + 1))" "$log")"
+if [[ "$dismiss_log" == *"PARK "* &&
+      "$dismiss_log" == *"ZOOM source --on"* &&
+      "$dismiss_log" != *"CLOSE float"* ]]; then
+  echo "ok   - dismiss parks floax and restores the pre-floax zoom"
 else
-  echo "FAIL - dismiss did not close floax and restore source zoom"
-  printf '%s\n' "$log_contents"
+  echo "FAIL - dismiss did not park floax and restore source zoom"
+  printf '%s\n' "$dismiss_log"
   exit 1
 fi

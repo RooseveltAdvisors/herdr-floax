@@ -8,8 +8,13 @@
 #   screen, so prefix+j / C-u / C-d have nothing to scroll. Running the shell
 #   (or a raw PTY multiplexer) directly keeps history in herdr.
 #
-# Persistence across toggle dismiss (which closes the herdr pane):
-#   dtach or abduco reattach the same PTY without using the alternate screen.
+# Persistence across toggle dismiss:
+#   the toggle script parks the live pane (`pane move --new-workspace`), so
+#   this process is never killed by a dismiss and reattaches on the next
+#   toggle by being moved back. dtach/abduco below are a SECOND, optional
+#   layer that survives the pane being killed by something other than the
+#   toggle (e.g. a manual workspace close), reattaching the same PTY without
+#   using the alternate screen.
 #   plain shell if neither is installed (fresh session each open).
 #
 # Optional legacy path:

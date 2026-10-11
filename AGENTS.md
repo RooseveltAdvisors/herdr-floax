@@ -12,12 +12,24 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   plugin surface.
 - **Architecture (0.4.0+):** the pane command is `bash scripts/floating-shell.sh` — a real herdr primary-screen shell (split + zoom via `scripts/toggle-floating.sh`). No nested ratatui/vt100 TUI. Host scrollback + herdr copy mode (`prefix+j`, `C-u`/`C-d`) work because the shell is not on the alternate screen.
 - **Toggle contract:** `scripts/toggle-floating.sh` is workspace-scoped
-  launch-or-reveal/dismiss: absent opens, unfocused reveals and re-zooms,
-  focused closes. Keep the split-then-`pane zoom --on` sequence; keybinding
-  actions tear down `overlay`/`zoomed` placements. It saves a pre-existing
-  workspace zoom under `HERDR_PLUGIN_STATE_DIR` and restores it on dismiss.
+  launch-or-reveal/dismiss: absent opens (or restores the parked pane),
+  unfocused reveals and re-zooms, focused dismisses by **parking**. Keep the
+  split-then-`pane zoom --on` sequence; keybinding actions tear down
+  `overlay`/`zoomed` placements. Dismiss moves the live pane to a background
+  workspace (`pane move --new-workspace --label floax`) and records its
+  workspace-qualified id in `$HERDR_PLUGIN_STATE_DIR/floax-parked-$ws-$session`;
+  the next toggle moves it back into the invoking pane's tab (tab id always
+  comes from `pane get <target>`, never from an ambient `HERDR_TAB_ID`, which
+  can belong to another session). A dead parked pane falls back to a fresh
+  open and clears the state. `park_pane` must `pane zoom --off` first:
+  zoomed tabs refuse `pane move`. `pane move` failure falls back to
+  `plugin pane close`. It also saves a pre-existing workspace zoom under
+  `HERDR_PLUGIN_STATE_DIR` and restores it on dismiss.
+- **Regression coverage:** `tests/toggle-floating-park.sh` (park/restore/
+  stale-fallback) and `tests/toggle-floating-zoom.sh` (zoom preservation on
+  park). Both stub the herdr binary; run them after any toggle change.
 - **Why not herdr `popup` placement:** stock 0.7.5 popup is session-modal outside the tiled layout; `enter_copy_mode` targets the focused *tiled* pane, and while a popup is open all keys are forwarded into it (prefix never enters copy mode on popup history). Split+zoom is the copy-mode-compatible floating shape.
-- **Why not default `tmux attach`:** tmux clients use the alternate screen, so herdr’s primary-screen scrollback/copy-mode stay empty. Persistence without alt-screen: `dtach` or `abduco`. `HERDR_FLOAX_USE_TMUX=1` opts back into tmux (inner copy mode only).
+- **Why not default `tmux attach`:** tmux clients use the alternate screen, so herdr’s primary-screen scrollback/copy-mode stay empty. Cross-toggle persistence does NOT need dtach/abduco anymore: dismiss parks the live pane via `pane move --new-workspace`. `dtach`/`abduco` remain an optional inner layer for non-toggle pane kills. `HERDR_FLOAX_USE_TMUX=1` opts back into tmux (inner copy mode only).
 - **Injected binary invariant (stale-binary fix):** every consumer of `HERDR_BIN_PATH`
   must accept it only when it is a regular executable file (`-f` and `-x`),
   otherwise fall back to `command -v herdr`; report no executable and exit 127
