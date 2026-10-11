@@ -7,13 +7,21 @@
 # workspace:
 #
 #   - no floating pane in this workspace       -> OPEN a new one, maximized
+#     (or RESTORE the previously dismissed one if it is still parked)
 #   - a floating pane exists but isn't focused  -> REVEAL it (focus + maximize)
-#   - the floating pane IS the focused pane      -> DISMISS it (close)
+#   - the floating pane IS the focused pane      -> DISMISS it (park)
+#
+# DISMISS parks the pane instead of closing it: `pane move --new-workspace`
+# puts the still-running shell in its own background workspace, so the
+# session, its processes, and its scrollback survive the toggle, exactly like
+# tmux-floax's hidden session. The next toggle moves the same pane back
+# (`pane move --tab ... --split`). The empty parked workspace closes itself
+# when its pane leaves. A stale parked state (pane gone) falls back to OPEN.
+# If `pane move` is unavailable, DISMISS falls back to closing the pane.
 #
 # herdr injects $HERDR_WORKSPACE_ID / $HERDR_PANE_ID / $HERDR_BIN_PATH into this
 # action command. Any parse/edge failure degrades to OPEN — never a silent
-# no-op. Persistence across a DISMISS is provided by scripts/floating-shell.sh
-# (dtach/abduco when installed).
+# no-op.
 # An optional profile name reads ~/.config/herdr/floax.conf:
 # [profile.<name>]
 # command = "..."
@@ -116,7 +124,9 @@ if [ -z "$ws" ]; then
 fi
 
 state_dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
+session="${profile:-default}"
 zoom_state="$state_dir/floax-zoom-$ws"
+parked_state="$state_dir/floax-parked-$ws-$session"
 
 save_zoom() {
   local target="${1:-}" excluded="${2:-}" zoomed
@@ -159,6 +169,49 @@ restore_zoom() {
   else
     rm -f "$zoom_state"
   fi
+}
+
+# Park the focused floax pane in its own background workspace. The pane id
+# changes on every move, so the parked id is what the state file records.
+park_pane() {
+  local pid="$1" out parked
+  # A zoomed tab refuses `pane move` (reason "zoomed_tab"); un-zoom first.
+  "$herdr" pane zoom "$pid" --off >/dev/null 2>&1
+  out="$("$herdr" pane move "$pid" --new-workspace --label floax --no-focus 2>/dev/null)" || return 1
+  parked="$(printf '%s' "$out" | jq -r '.result.move_result.pane.pane_id // empty')"
+  [ -n "$parked" ] || return 1
+  mkdir -p "$state_dir"
+  printf '%s\n' "$parked" > "$parked_state"
+}
+
+# Move the previously parked pane back into the invoking pane's tab and
+# maximize it. Returns 1 when there is nothing restorable, so the caller can
+# fall through to a fresh OPEN.
+restore_parked() {
+  local parked target tab out new_pane
+  [ -f "$parked_state" ] || return 1
+  parked="$(<"$parked_state")"
+  if [ -z "$parked" ] || ! "$herdr" pane get "$parked" >/dev/null 2>&1; then
+    rm -f "$parked_state"
+    return 1
+  fi
+  target="${HERDR_PANE_ID:-}"
+  [ -z "$target" ] && target="$("$herdr" pane current 2>/dev/null | jq -r '.result.pane.pane_id // empty')"
+  [ -n "$target" ] || return 1
+  # Always derive the tab from the target pane itself: an ambient HERDR_TAB_ID
+  # can belong to another session (the script may run inside a pane of a
+  # different herdr) and would send the move to a nonexistent tab.
+  tab="$("$herdr" pane get "$target" 2>/dev/null | jq -r '.result.pane.tab_id // empty')"
+  [ -z "$tab" ] && tab="${HERDR_TAB_ID:-}"
+  [ -n "$tab" ] || return 1
+  save_zoom "$target"
+  out="$("$herdr" pane move "$parked" --tab "$tab" --split right \
+    --target-pane "$target" --focus 2>/dev/null)" || return 1
+  new_pane="$(printf '%s' "$out" | jq -r '.result.move_result.pane.pane_id // empty')"
+  [ -n "$new_pane" ] || return 1
+  rm -f "$parked_state"
+  "$herdr" pane zoom "$new_pane" --on >/dev/null 2>&1
+  exit 0
 }
 
 open_pane() {
@@ -218,23 +271,30 @@ if [ -n "$ws" ]; then
         | "\(.focused) \(.pane_id)"' 2>/dev/null | head -n1)"
 fi
 
-# No floating pane here → open one.
-[ -z "$found" ] && open_pane
+# No floating pane here → restore the parked one, else open a fresh one.
+if [ -z "$found" ]; then
+  restore_parked
+  open_pane
+fi
 
 focused="${found%% *}"
 pid="${found#* }"
 
 if [ "$focused" = "true" ]; then
-  # Currently shown (focused + maximized) → dismiss. floating-shell.sh keeps
-  # the session alive when dtach/abduco is available.
-  "$herdr" plugin pane close "$pid"
-  close_status=$?
-  if [ "$close_status" -eq 0 ]; then
-    restore_zoom_status=0
-    restore_zoom || restore_zoom_status=$?
-    [ "$restore_zoom_status" -ne 0 ] && exit "$restore_zoom_status"
+  # Currently shown (focused + maximized) → dismiss by parking the pane in a
+  # background workspace, so the shell keeps running across toggles.
+  park_status=0
+  park_pane "$pid" || park_status=$?
+  if [ "$park_status" -ne 0 ]; then
+    # Older herdr without `pane move --new-workspace`: fall back to close.
+    "$herdr" plugin pane close "$pid"
+    close_status=$?
+    [ "$close_status" -ne 0 ] && exit "$close_status"
   fi
-  exit "$close_status"
+  restore_zoom_status=0
+  restore_zoom || restore_zoom_status=$?
+  [ "$restore_zoom_status" -ne 0 ] && exit "$restore_zoom_status"
+  exit 0
 else
   # Exists but you focused away (so it un-maximized) → reveal.
   save_zoom "$pid" "$pid"
