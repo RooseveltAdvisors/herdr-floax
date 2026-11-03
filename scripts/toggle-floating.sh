@@ -11,13 +11,16 @@
 #   - a floating pane exists but isn't focused  -> REVEAL it (focus + maximize)
 #   - the floating pane IS the focused pane      -> DISMISS it (park)
 #
-# DISMISS parks the pane instead of closing it: `pane move --new-workspace`
+# DISMISS parks the pane instead of closing it:
+#   pane move --new-workspace --label floax --tab-label "$LABEL"
 # puts the still-running shell in its own background workspace, so the
 # session, its processes, and its scrollback survive the toggle, exactly like
-# tmux-floax's hidden session. The next toggle moves the same pane back
-# (`pane move --tab ... --split`). The empty parked workspace closes itself
-# when its pane leaves. A stale parked state (pane gone) falls back to OPEN.
-# If `pane move` is unavailable, DISMISS falls back to closing the pane.
+# tmux-floax's hidden session. workspace.label == "floax" is the durable
+# signal other tools should use (not a bare tab name "1"). The next toggle
+# moves the same pane back (`pane move --tab ... --split`). The empty parked
+# workspace closes itself when its pane leaves. A stale parked state (pane
+# gone) falls back to OPEN. If `pane move` is unavailable, DISMISS falls
+# back to closing the pane.
 #
 # herdr injects $HERDR_WORKSPACE_ID / $HERDR_PANE_ID / $HERDR_BIN_PATH into this
 # action command. Any parse/edge failure degrades to OPEN — never a silent
@@ -173,11 +176,21 @@ restore_zoom() {
 
 # Park the focused floax pane in its own background workspace. The pane id
 # changes on every move, so the parked id is what the state file records.
+#
+# Park identity contract (other tools may rely on this):
+#   workspace.label == "floax"   durable signal that this workspace is a
+#                                parked floax scratch, not a user workspace
+#   tab.label       == "$LABEL"  same marker as the docked pane label, so
+#                                pickers that title by tab do not show "1"
+#   pane.label      == "$LABEL"  preserved by herdr across the move; we do
+#                                not re-set it because pane rename is not
+#                                required when the plugin pane title sticks
 park_pane() {
   local pid="$1" out parked
   # A zoomed tab refuses `pane move` (reason "zoomed_tab"); un-zoom first.
   "$herdr" pane zoom "$pid" --off >/dev/null 2>&1
-  out="$("$herdr" pane move "$pid" --new-workspace --label floax --no-focus 2>/dev/null)" || return 1
+  out="$("$herdr" pane move "$pid" --new-workspace --label floax \
+    --tab-label "$LABEL" --no-focus 2>/dev/null)" || return 1
   parked="$(printf '%s' "$out" | jq -r '.result.move_result.pane.pane_id // empty')"
   [ -n "$parked" ] || return 1
   mkdir -p "$state_dir"

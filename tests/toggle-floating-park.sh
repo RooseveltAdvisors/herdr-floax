@@ -96,6 +96,16 @@ if ! grep -q -- "--new-workspace" "$log"; then
   printf '%s\n' "$(<"$log")"
   exit 1
 fi
+if ! grep -q -- "--label floax" "$log"; then
+  echo "FAIL - dismiss did not label the park workspace floax"
+  printf '%s\n' "$(<"$log")"
+  exit 1
+fi
+if ! grep -q -- "--tab-label ⌂ floax" "$log"; then
+  echo "FAIL - dismiss did not set the park tab label to ⌂ floax"
+  printf '%s\n' "$(<"$log")"
+  exit 1
+fi
 if grep -q "CLOSE" "$log"; then
   echo "FAIL - dismiss closed the pane instead of parking it"
   printf '%s\n' "$(<"$log")"

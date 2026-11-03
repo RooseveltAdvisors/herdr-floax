@@ -69,11 +69,27 @@ and tried to own PgUp/wheel inside the plugin. That blocked herdr copy mode
 ## Persistence
 
 Dismiss **parks** the pane instead of closing it: the toggle moves the
-still-running shell into its own background workspace (labeled `floax`) with
-`herdr pane move --new-workspace`. The next toggle moves the same pane back
-and re-maximizes it. The shell, its environment, its running processes, and
-its herdr scrollback all survive the toggle, the same way tmux-floax keeps
-its hidden session. The parked workspace closes itself once its pane leaves.
+still-running shell into its own background workspace with
+`herdr pane move --new-workspace --label floax --tab-label "⌂ floax"`.
+The next toggle moves the same pane back and re-maximizes it. The shell,
+its environment, its running processes, and its herdr scrollback all survive
+the toggle, the same way tmux-floax keeps its hidden session. The parked
+workspace closes itself once its pane leaves.
+
+### Park identity contract
+
+Other tools (session pickers, recall, automation) should treat a parked
+floax by these labels, not by a bare tab name like `"1"`:
+
+| Field | Value | Notes |
+| --- | --- | --- |
+| `workspace.label` | `floax` | **Durable signal.** Always set on park. Filter on this. |
+| `tab.label` | `⌂ floax` | Same marker as the docked pane; set via `--tab-label`. |
+| `pane.label` | `⌂ floax` | Plugin pane title; herdr keeps it across the move. |
+
+Do not hide every tab literally named `"1"` globally. Pre-0.5.1 parks may
+still show tab label `"1"`; `workspace.label == "floax"` remains the
+reliable filter for those too.
 
 No extra install is required for this. Two optional extras still apply:
 
