@@ -16,15 +16,21 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   unfocused reveals and re-zooms, focused dismisses by **parking**. Keep the
   split-then-`pane zoom --on` sequence; keybinding actions tear down
   `overlay`/`zoomed` placements. Dismiss moves the live pane to a background
-  workspace (`pane move --new-workspace --label floax`) and records its
-  workspace-qualified id in `$HERDR_PLUGIN_STATE_DIR/floax-parked-$ws-$session`;
-  the next toggle moves it back into the invoking pane's tab (tab id always
-  comes from `pane get <target>`, never from an ambient `HERDR_TAB_ID`, which
-  can belong to another session). A dead parked pane falls back to a fresh
-  open and clears the state. `park_pane` must `pane zoom --off` first:
-  zoomed tabs refuse `pane move`. `pane move` failure falls back to
-  `plugin pane close`. It also saves a pre-existing workspace zoom under
-  `HERDR_PLUGIN_STATE_DIR` and restores it on dismiss.
+  workspace (`pane move --new-workspace --label floax --tab-label "$LABEL"`)
+  and records its workspace-qualified id in
+  `$HERDR_PLUGIN_STATE_DIR/floax-parked-$ws-$session`; the next toggle moves
+  it back into the invoking pane's tab (tab id always comes from
+  `pane get <target>`, never from an ambient `HERDR_TAB_ID`, which can belong
+  to another session). A dead parked pane falls back to a fresh open and
+  clears the state. `park_pane` must `pane zoom --off` first: zoomed tabs
+  refuse `pane move`. `pane move` failure falls back to `plugin pane close`.
+  It also saves a pre-existing workspace zoom under `HERDR_PLUGIN_STATE_DIR`
+  and restores it on dismiss.
+- **Park identity contract (for other tools):** durable filter is
+  `workspace.label == "floax"` (case-sensitive as set; treat case-insensitive
+  if you want). Park also sets `tab.label` and keeps `pane.label` as
+  `⌂ floax` (the plugin pane title / `$LABEL`). Do not filter every tab named
+  `"1"`. Pre-0.5.1 parks only had workspace label floax + default tab `"1"`.
 - **Regression coverage:** `tests/toggle-floating-park.sh` (park/restore/
   stale-fallback) and `tests/toggle-floating-zoom.sh` (zoom preservation on
   park). Both stub the herdr binary; run them after any toggle change.
